@@ -99,7 +99,8 @@ final class ElementTest: XCTestCase {
         let secretEphemeral = Scalar.random()
         let publicEphemeral = Element(generatorTimes: secretEphemeral)
         
-        let c = Scalar(fromUniformBytes: (0..<64).map { _ in UInt8.random(in: 0...255) })
+        var rng = SystemRandomNumberGenerator()
+        let c = Scalar(fromUniformBytes: (0..<64).map { _ in rng.next() })
         let t = secretEphemeral + c * secretStatic
         
         let lhs = Element(generatorTimes: t)

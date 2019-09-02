@@ -95,7 +95,8 @@ public struct Scalar {
     }
     
     public static func random() -> Scalar {
-        Scalar(fromUniformBytes: (0..<64).map { _ in UInt8.random(in: 0...255) })
+        var rng = SystemRandomNumberGenerator()
+        return Scalar(fromUniformBytes: (0..<64).map { _ in rng.next() })
     }
     
     public func encode<M>(to data: inout M) where M: MutableDataProtocol {

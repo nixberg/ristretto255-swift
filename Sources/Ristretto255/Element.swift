@@ -143,7 +143,8 @@ public struct Element: Equatable {
     }
     
     public static func random() -> Element {
-        Element(fromUniformBytes: (0..<64).map { _ in UInt8.random(in: 0...255) })
+        var rng = SystemRandomNumberGenerator()
+        return Element(fromUniformBytes: (0..<64).map { _ in rng.next() })
     }
     
     public func encoded() -> [UInt8] {
