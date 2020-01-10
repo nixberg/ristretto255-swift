@@ -85,14 +85,6 @@ final class ScalarTests: XCTestCase {
             0x0000000000000000
         ))
     }
-    
-    static var allTests = [
-        ("testRoundtrip", testRoundtrip),
-        ("testFromUniform", testFromUniform),
-        ("testAddition", testAddition),
-        ("testSubtraction", testSubtraction),
-        ("testMultiplication", testMultiplication),
-    ]
 }
 
 extension Scalar: Equatable {

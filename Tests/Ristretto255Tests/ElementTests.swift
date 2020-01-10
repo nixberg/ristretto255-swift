@@ -108,13 +108,4 @@ final class ElementTest: XCTestCase {
         
         XCTAssertEqual(lhs, rhs)
     }
-    
-    static var allTests = [
-        ("testRoundtripIdentity", testRoundtripIdentity),
-        ("testRoundtripGenerator", testRoundtripGenerator),
-        ("testRoundtripRandomElement", testRoundtripRandomElement),
-        ("testScalarMultiplication", testScalarMultiplication),
-        ("testKeyExchange", testKeyExchange),
-        ("testSchnorr", testSchnorr),
-    ]
 }

@@ -114,17 +114,6 @@ final class FieldElementTest: XCTestCase {
         XCTAssertEqual(squareRoot.squared() * 4, 1)
         XCTAssert(Bool(squareRoot.isPositive))
     }
-    
-    static var allTests = [
-        ("testRoundtrip", testRoundtrip),
-        ("testHighBitIgnored", testHighBitIgnored),
-        ("testNegationAndAbs", testNegationAndAbs),
-        ("testMultiplication", testMultiplication),
-        ("testSquaring", testSquaring),
-        ("testPowP5Over8", testPowP5Over8),
-        ("testInversion", testInversion),
-        ("testSquareRoot", testSquareRoot),
-    ]
 }
 
 extension FieldElement: Equatable {
