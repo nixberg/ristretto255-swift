@@ -10,15 +10,15 @@ struct LookupTable {
     }
     
     subscript(index: Int8) -> ProjectiveNiels {
-       let mask = index &>> 7
-       let absIndex = ((index &+ mask) ^ mask)
-       
-       var t = ProjectiveNiels()
-       for i in table.indices {
-            t = (absIndex == Int8(i) &+ 1).select(table[i], else: t)
-       }
-       
-        return CTBool(mask & 0x01).select(-t, else: t)
+        let mask = index &>> 7
+        let absIndex = ((index &+ mask) ^ mask)
+        
+        var t = ProjectiveNiels()
+        for i in table.indices {
+            t = (absIndex == Int8(i) &+ 1).then(table[i], else: t)
+        }
+        
+        return CTBool(mask & 0x01).then(-t, else: t)
     }
 }
 
@@ -35,7 +35,7 @@ struct GeneratorLookupTable {
                 row[i &+ 1] = AffineNiels(Element(element + row[i]))
             }
             table.append(row)
-            element = element.multipliedByPow2(8)
+            element = element.times2(8)
         }
         self.table = table
     }
@@ -46,28 +46,28 @@ struct GeneratorLookupTable {
         
         var t = AffineNiels()
         for i in table[row].indices {
-            t = (absIndex == Int8(i) &+ 1).select(table[row][i], else: t)
+            t = (absIndex == Int8(i) &+ 1).then(table[row][i], else: t)
         }
         
-        return CTBool(mask & 0x01).select(-t, else: t)
+        return CTBool(mask & 0x01).then(-t, else: t)
      }
 }
 
-extension CTBool {
-    fileprivate func select(_ t: ProjectiveNiels, else f: ProjectiveNiels) -> ProjectiveNiels {
+fileprivate extension CTBool {
+    func then(_ `true`: ProjectiveNiels, else `false`: ProjectiveNiels) -> ProjectiveNiels {
         ProjectiveNiels(
-            self.select(t.yPlusX, else: f.yPlusX),
-            self.select(t.yMinusX, else: f.yMinusX),
-            self.select(t.z, else: f.z),
-            self.select(t.tTimesTwoD, else: f.tTimesTwoD)
+            self.then(`true`.yPlusX, else: `false`.yPlusX),
+            self.then(`true`.yMinusX, else: `false`.yMinusX),
+            self.then(`true`.z, else: `false`.z),
+            self.then(`true`.tTimesTwoD, else: `false`.tTimesTwoD)
         )
     }
     
-    fileprivate func select(_ t: AffineNiels, else f: AffineNiels) -> AffineNiels {
+    func then(_ `true`: AffineNiels, else `false`: AffineNiels) -> AffineNiels {
         AffineNiels(
-            self.select(t.yPlusX, else: f.yPlusX),
-            self.select(t.yMinusX, else: f.yMinusX),
-            self.select(t.xyTimesTwoD, else: f.xyTimesTwoD)
+            self.then(`true`.yPlusX, else: `false`.yPlusX),
+            self.then(`true`.yMinusX, else: `false`.yMinusX),
+            self.then(`true`.xyTimesTwoD, else: `false`.xyTimesTwoD)
         )
     }
 }

@@ -1,6 +1,6 @@
 struct CTBool: Equatable {
-    static let one  = CTBool(UInt8(0x01)) // true
-    static let zero = CTBool(UInt8(0x00)) // false
+    static let `true`  = CTBool(UInt8(0x01))
+    static let `false` = CTBool(UInt8(0x00))
     
     let rawValue: UInt8
     
@@ -37,7 +37,7 @@ struct CTBool: Equatable {
 
 extension Bool {
     init(_ value: CTBool) {
-        self = (value == CTBool.one)
+        self = (value == .true)
     }
 }
 
@@ -58,6 +58,6 @@ extension Int8 {
 extension Array where Element == UInt8 {
     static func == (lhs: [UInt8], rhs: [UInt8]) -> CTBool {
         precondition(lhs.count == rhs.count)
-        return zip(lhs, rhs).map(==).reduce(CTBool.one, &&)
+        return zip(lhs, rhs).map(==).reduce(CTBool.true, &&)
     }
 }

@@ -49,7 +49,7 @@ public struct Scalar {
         self.e = e
     }
     
-    public init<D>(from data: D) where D: DataProtocol {
+    public init?<D>(from data: D) where D: DataProtocol {
         precondition(data.count == 32)
         
         var words = [UInt64](repeating: 0, count: 4)
@@ -57,7 +57,9 @@ public struct Scalar {
             words[i / 8] |= UInt64(byte) &<< (8 &* (i % 8))
         }
         
-        precondition(words.isMinimal())
+        guard words.isMinimal() else {
+            return nil
+        }
         
         a = (                  words[0] &<<  0) & mask
         b = (words[0] &>> 52 | words[1] &<< 12) & mask
@@ -68,7 +70,7 @@ public struct Scalar {
     
     public init<D>(fromUniformBytes data: D) where D: DataProtocol {
         precondition(data.count == 64)
-
+        
         var words = [UInt64](repeating: 0, count: 8)
         for (i, byte) in data.enumerated() {
             words[i / 8] |= UInt64(byte) &<< (8 * (i % 8))
@@ -194,52 +196,52 @@ public struct Scalar {
         return Scalar(a, b, c, d, e)
     }
     
-    public static func * (a: Scalar, b: Scalar) -> Scalar {
-        reduce(multiply(reduce(multiply(a, b)), montgomeryRadixSquared))
+    public static func * (lhs: Scalar, rhs: Scalar) -> Scalar {
+        reduce(multiply(reduce(multiply(lhs, rhs)), montgomeryRadixSquared))
     }
-        
+    
     private static func multiply(_ lhs: Scalar, _ rhs: Scalar) -> [UInt128] {
-        [UInt128](arrayLiteral:
-            lhs.a * rhs.a,
-            lhs.a * rhs.b + lhs.b * rhs.a,
-            lhs.a * rhs.c + lhs.b * rhs.b + lhs.c * rhs.a,
-            lhs.a * rhs.d + lhs.b * rhs.c + lhs.c * rhs.b + lhs.d * rhs.a,
-            lhs.a * rhs.e + lhs.b * rhs.d + lhs.c * rhs.c + lhs.d * rhs.b + lhs.e * rhs.a,
-                            lhs.b * rhs.e + lhs.c * rhs.d + lhs.d * rhs.c + lhs.e * rhs.b,
-                                            lhs.c * rhs.e + lhs.d * rhs.d + lhs.e * rhs.c,
-                                                            lhs.d * rhs.e + lhs.e * rhs.d,
-                                                                            lhs.e * rhs.e
-        )
+        [
+            lhs.a <*> rhs.a,
+            lhs.a <*> rhs.b &+ lhs.b <*> rhs.a,
+            lhs.a <*> rhs.c &+ lhs.b <*> rhs.b &+ lhs.c <*> rhs.a,
+            lhs.a <*> rhs.d &+ lhs.b <*> rhs.c &+ lhs.c <*> rhs.b &+ lhs.d <*> rhs.a,
+            lhs.a <*> rhs.e &+ lhs.b <*> rhs.d &+ lhs.c <*> rhs.c &+ lhs.d <*> rhs.b &+ lhs.e <*> rhs.a,
+                               lhs.b <*> rhs.e &+ lhs.c <*> rhs.d &+ lhs.d <*> rhs.c &+ lhs.e <*> rhs.b,
+                                                  lhs.c <*> rhs.e &+ lhs.d <*> rhs.d &+ lhs.e <*> rhs.c,
+                                                                     lhs.d <*> rhs.e &+ lhs.e <*> rhs.d,
+                                                                                        lhs.e <*> rhs.e
+        ]
     }
     
     private static func reduce(_ limbs: [UInt128]) -> Scalar {
         @inline(__always)
         func one(_ sum: UInt128) -> (UInt128, UInt64) {
-            let p = (sum.low &* 0x51da312547e1b) & ((1 << 52) - 1)
-            return ((sum + p * order.a) &>> 52, p)
+            let p = (sum.low &* 0x51da312547e1b) & mask
+            return ((sum &+ p <*> order.a) &>> 52, p)
         }
         
         @inline(__always)
         func two(_ sum: UInt128) -> (UInt128, UInt64) {
-            let w = sum.low & ((1 << 52) - 1)
+            let w = sum.low & mask
             return (sum &>> 52, w)
         }
         
         var carry: UInt128
         let n0, n1, n2, n3, n4: UInt64
         
-        (carry, n0) = one(        limbs[0])
-        (carry, n1) = one(carry + limbs[1] + n0 * order.b)
-        (carry, n2) = one(carry + limbs[2] + n0 * order.c + n1 * order.b)
-        (carry, n3) = one(carry + limbs[3]                + n1 * order.c + n2 * order.b)
-        (carry, n4) = one(carry + limbs[4] + n0 * order.e                + n2 * order.c + n3 * order.b)
+        (carry, n0) = one(         limbs[0])
+        (carry, n1) = one(carry &+ limbs[1] &+ n0 <*> order.b)
+        (carry, n2) = one(carry &+ limbs[2] &+ n0 <*> order.c &+ n1 <*> order.b)
+        (carry, n3) = one(carry &+ limbs[3]                   &+ n1 <*> order.c &+ n2 <*> order.b)
+        (carry, n4) = one(carry &+ limbs[4] &+ n0 <*> order.e                   &+ n2 <*> order.c &+ n3 <*> order.b)
         
         let r0, r1, r2, r3, r4: UInt64
         
-        (carry, r0) = two(carry + limbs[5] + n1 * order.e                + n3 * order.c + n4 * order.b)
-        (carry, r1) = two(carry + limbs[6]                + n2 * order.e                + n4 * order.c)
-        (carry, r2) = two(carry + limbs[7]                               + n3 * order.e               )
-        (carry, r3) = two(carry + limbs[8]                                              + n4 * order.e)
+        (carry, r0) = two(carry &+ limbs[5] &+ n1 <*> order.e                   &+ n3 <*> order.c &+ n4 <*> order.b)
+        (carry, r1) = two(carry &+ limbs[6]                   &+ n2 <*> order.e                   &+ n4 <*> order.c)
+        (carry, r2) = two(carry &+ limbs[7]                                     &+ n3 <*> order.e                  )
+        (carry, r3) = two(carry &+ limbs[8]                                                       &+ n4 <*> order.e)
                 r4  = carry.low
         
         return Scalar(r0, r1, r2, r3, r4) - order
@@ -249,13 +251,13 @@ public struct Scalar {
         var output = [Int8](repeating: 0, count: 64)
         
         for (i, byte) in self.encoded().enumerated() {
-            output[2 &* i    ] = Int8(byte & 15)
-            output[2 &* i + 1] = Int8((byte &>> 4) & 15)
+            output[2 &* i     ] = Int8(byte & 15)
+            output[2 &* i &+ 1] = Int8((byte &>> 4) & 15)
         }
         
         for i in 0..<63 {
             let carry = (output[i] &+ 8) &>> 4
-            output[i] = output[i] &- (carry &<< 4)
+            output[i     ] = output[i     ] &- (carry &<< 4)
             output[i &+ 1] = output[i &+ 1] &+ carry
         }
         
@@ -263,8 +265,8 @@ public struct Scalar {
     }
 }
 
-extension Array where Element == UInt64 {
-    fileprivate func isMinimal() -> Bool {
+fileprivate extension Array where Element == UInt64 {
+    func isMinimal() -> Bool {
         let order: [UInt64] = [
             0x5812631a5cf5d3ed,
             0x14def9dea2f79cd6,

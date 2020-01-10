@@ -87,32 +87,32 @@ final class FieldElementTest: XCTestCase {
         XCTAssertEqual(a.inverted(), aInverted)
         XCTAssertEqual(a.inverted().inverted(), a)
     }
-
+    
     func testSquareRoot() {
         var (wasSquare, squareRoot) = 0.squareRoot(over: 0)
         XCTAssert(Bool(wasSquare))
         XCTAssertEqual(squareRoot, 0)
-        XCTAssert(Bool(squareRoot.isPositive))
+        XCTAssert(Bool(squareRoot.isPositive()))
         
         (wasSquare, squareRoot) = 1.squareRoot(over: 0)
         XCTAssert(Bool(!wasSquare))
         XCTAssertEqual(squareRoot, 0)
-        XCTAssert(Bool(squareRoot.isPositive))
+        XCTAssert(Bool(squareRoot.isPositive()))
         
         (wasSquare, squareRoot) = 2.squareRoot(over: 1)
         XCTAssert(Bool(!wasSquare))
         XCTAssertEqual(squareRoot.squared(), squareRootMinusOne * 2)
-        XCTAssert(Bool(squareRoot.isPositive))
+        XCTAssert(Bool(squareRoot.isPositive()))
         
         (wasSquare, squareRoot) = 4.squareRoot(over: 1)
         XCTAssert(Bool(wasSquare))
         XCTAssertEqual(squareRoot.squared(), 4)
-        XCTAssert(Bool(squareRoot.isPositive))
+        XCTAssert(Bool(squareRoot.isPositive()))
         
         (wasSquare, squareRoot) = 1.squareRoot(over: 4)
         XCTAssert(Bool(wasSquare))
         XCTAssertEqual(squareRoot.squared() * 4, 1)
-        XCTAssert(Bool(squareRoot.isPositive))
+        XCTAssert(Bool(squareRoot.isPositive()))
     }
 }
 
@@ -130,7 +130,7 @@ extension FieldElement: ExpressibleByIntegerLiteral {
     }
 }
 
-extension Int {
+fileprivate extension Int {
     func squareRoot(over v: FieldElement) -> (CTBool, FieldElement) {
         FieldElement(UInt64(self)).squareRoot(over: v)
     }

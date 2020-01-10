@@ -26,10 +26,10 @@ public struct Element: Equatable {
     let t: FieldElement
         
     init() {
-        x = zero
-        y = one
-        z = one
-        t = zero
+        x = .zero
+        y = .one
+        z = .one
+        t = .zero
     }
     
     init(_ x: FieldElement, _ y: FieldElement, _ z: FieldElement, _ t: FieldElement) {
@@ -46,21 +46,21 @@ public struct Element: Equatable {
        t = element.x * element.y
     }
     
-    public init<D>(from data: D) where D: DataProtocol {
+    public init?<D>(from data: D) where D: DataProtocol {
         precondition(data.count == 32)
         
         let s = FieldElement(from: data)
         guard zip(data, s.encoded()).map(^).reduce(0, |) == 0 else {
-            fatalError()
+            return nil
         }
         
-        guard Bool(s.isPositive) else {
-            fatalError()
+        guard Bool(s.isPositive()) else {
+            return nil
         }
         
         let sSquare = s.squared()
-        let u1 = one - sSquare
-        let u2 = one + sSquare
+        let u1 = .one - sSquare
+        let u2 = .one + sSquare
         let u2Squared = u2.squared()
         
         let v = -(d * u1.squared()) - u2Squared
@@ -72,11 +72,11 @@ public struct Element: Equatable {
         
         x = abs((s + s) * denX)
         y = u1 * denY
-        z = one
+        z = .one
         t = x * y
         
-        guard Bool(wasSquare && t.isPositive && !y.isZero) else {
-            fatalError()
+        guard Bool(wasSquare && t.isPositive() && !y.isZero()) else {
+            return nil
         }
     }
     
@@ -111,22 +111,22 @@ public struct Element: Equatable {
         )
         
         let r = squareRootMinusOne * t.squared()
-        let u = (r + one) * oneMinusDSquared
+        let u = (r + .one) * oneMinusDSquared
         let v = (minusOne - r * d) * (r + d)
         
         var (wasSquare, s) = u.squareRoot(over: v)
         let sPrime = -abs(s * t)
-        s = wasSquare.select(s, else: sPrime)
-        let c = wasSquare.select(minusOne, else: r)
+        s = wasSquare.then(s, else: sPrime)
+        let c = wasSquare.then(minusOne, else: r)
         
-        let n = c * (r - one) * dMinusOneSquared - v
+        let n = c * (r - .one) * dMinusOneSquared - v
         
         let sSquared = s.squared()
         
         let w0 = (s + s) * v
         let w1 = n * squareRootATimesDMinusOne
-        let w2 = one - sSquared
-        let w3 = one + sSquared
+        let w2 = .one - sSquared
+        let w3 = .one + sSquared
         
         self = Element(
             w0 * w3,
@@ -165,12 +165,12 @@ public struct Element: Equatable {
         let den2 = u2 * inverseSquareRoot
         let zInverted = den1 * den2 * t
         
-        let rotate = (t * zInverted).isNegative
-        let x = rotate.select(self.y * squareRootMinusOne, else: self.x)
-        var y = rotate.select(self.x * squareRootMinusOne, else: self.y)
-        let denInverted = rotate.select(den1 * inverseSquareRootMinusOneMinusD, else: den2)
+        let rotate = (t * zInverted).isNegative()
+        let x = rotate.then(self.y * squareRootMinusOne, else: self.x)
+        var y = rotate.then(self.x * squareRootMinusOne, else: self.y)
+        let denInverted = rotate.then(den1 * inverseSquareRootMinusOneMinusD, else: den2)
         
-        y = (x * zInverted).isNegative.select(-y, else: y)
+        y = (x * zInverted).isNegative().then(-y, else: y)
         
         let s = abs(denInverted * (z - y))
         
@@ -198,7 +198,7 @@ public struct Element: Equatable {
         }))
     }
     
-    func multipliedByPow2(_ k: UInt32) -> Element {
+    func times2(_ k: UInt32) -> Element {
         Element((0..<(k &- 1)).reduce(Projective(self), { (e, _) in
             Projective(e.doubled())
         }).doubled())
@@ -211,7 +211,7 @@ public struct Element: Equatable {
             Element(e + generatorLookupTable[i / 2, digits[i]])
         })
         
-        sum = sum.multipliedByPow2(4)
+        sum = sum.times2(4)
         
         self = stride(from: 0, to: 64, by: 2).reduce(sum, { (e, i) in
             Element(e + generatorLookupTable[i / 2, digits[i]])

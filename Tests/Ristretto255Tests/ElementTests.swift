@@ -4,7 +4,7 @@ import XCTest
 final class ElementTest: XCTestCase {
     func testRoundtripIdentity() {
         let identityBytes = [UInt8](repeating: 0, count: 32)
-        XCTAssertEqual(identityBytes, Element(from: identityBytes).encoded())
+        XCTAssertEqual(identityBytes, Element(from: identityBytes)!.encoded())
         XCTAssertEqual(identityBytes, Element().encoded())
     }
     
@@ -15,7 +15,7 @@ final class ElementTest: XCTestCase {
             0x58, 0xe3, 0x0b, 0x6a, 0xa5, 0x82, 0xdd, 0x8d,
             0xb6, 0xa6, 0x59, 0x45, 0xe0, 0x8d, 0x2d, 0x76
         ]
-        let decodedGenerator = Element(from: generatorBytes)
+        let decodedGenerator = Element(from: generatorBytes)!
         XCTAssertEqual(Element.generator, decodedGenerator)
         XCTAssertEqual(generatorBytes, decodedGenerator.encoded())
         XCTAssertEqual(generatorBytes, Element.generator.encoded())

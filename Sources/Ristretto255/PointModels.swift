@@ -33,9 +33,9 @@ struct Projective {
     let z: FieldElement
     
     init() {
-        x = zero
-        y = one
-        z = one
+        x = .zero
+        y = .one
+        z = .one
     }
     
     init(_ element: Completed) {
@@ -72,10 +72,10 @@ struct ProjectiveNiels {
     let tTimesTwoD: FieldElement
     
     init() {
-        yPlusX = one
-        yMinusX = one
-        z = one
-        tTimesTwoD = zero
+        yPlusX = .one
+        yMinusX = .one
+        z = .one
+        tTimesTwoD = .zero
     }
     
     init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ z: FieldElement, _ tTimes2D: FieldElement) {
@@ -138,9 +138,9 @@ struct AffineNiels {
     let xyTimesTwoD: FieldElement
     
     init() {
-        yPlusX = one
-        yMinusX = one
-        xyTimesTwoD = zero
+        yPlusX = .one
+        yMinusX = .one
+        xyTimesTwoD = .zero
     }
     
     init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ xyTimes2D: FieldElement) {
