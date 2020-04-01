@@ -1,24 +1,22 @@
 struct LookupTable {
     private let table: [ProjectiveNiels]
     
-    init(from element: Element) {
-        var table = [ProjectiveNiels](repeating: ProjectiveNiels(element), count: 8)
-        for i in 0..<7 {
-            table[i &+ 1] = ProjectiveNiels(Element(element + table[i]))
+    init(for element: Element) {
+        table = (1..<8).reduce(into: [ProjectiveNiels(element)]) { table, _ in
+            table.append(ProjectiveNiels(Element(element + table.last!)))
         }
-        self.table = table
     }
     
     subscript(index: Int8) -> ProjectiveNiels {
         let mask = index &>> 7
-        let absIndex = ((index &+ mask) ^ mask)
+        let absoluteIndex = ((index &+ mask) ^ mask)
         
-        var t = ProjectiveNiels()
-        for i in table.indices {
-            t = (absIndex == Int8(i) &+ 1).then(table[i], else: t)
+        var result = ProjectiveNiels.zero
+        for (i, element) in table.enumerated() {
+            result = result.or(element, if: absoluteIndex == Int8(i + 1))
         }
         
-        return CTBool(mask & 0x01).then(-t, else: t)
+        return result.or(-result, if: CTBool(mask & 0x01))
     }
 }
 
@@ -26,48 +24,48 @@ struct GeneratorLookupTable {
     private let table: [[AffineNiels]]
     
     init() {
-        var table = [[AffineNiels]]()
-        
-        var element = Element.generator
-        for _ in 0..<32 {
-            var row = [AffineNiels](repeating: AffineNiels(element), count: 8)
-            for i in 0..<7 {
-                row[i &+ 1] = AffineNiels(Element(element + row[i]))
+        func row(for element: Element) -> [AffineNiels] {
+            (1..<8).reduce(into: [AffineNiels(element)]) { table, _ in
+                table.append(AffineNiels(Element(element + table.last!)))
             }
-            table.append(row)
-            element = element.times2(8)
         }
-        self.table = table
+        table = sequence(first: Element.generator) {
+            $0.doubledRepeatedly(count: 8)
+        }.prefix(32).map {
+            row(for: $0)
+        }
     }
     
-    subscript(row: Int, index: Int8) -> AffineNiels {
+    subscript(rowIndex: Int, index: Int8) -> AffineNiels {
         let mask = index &>> 7
-        let absIndex = ((index &+ mask) ^ mask)
+        let absoluteIndex = ((index &+ mask) ^ mask)
         
-        var t = AffineNiels()
-        for i in table[row].indices {
-            t = (absIndex == Int8(i) &+ 1).then(table[row][i], else: t)
+        var result = AffineNiels.zero
+        for (i, element) in table[rowIndex].enumerated() {
+            result = result.or(element, if: absoluteIndex == Int8(i + 1))
         }
         
-        return CTBool(mask & 0x01).then(-t, else: t)
+        return result.or(-result, if: CTBool(mask & 0x01))
      }
 }
 
-fileprivate extension CTBool {
-    func then(_ `true`: ProjectiveNiels, else `false`: ProjectiveNiels) -> ProjectiveNiels {
-        ProjectiveNiels(
-            self.then(`true`.yPlusX, else: `false`.yPlusX),
-            self.then(`true`.yMinusX, else: `false`.yMinusX),
-            self.then(`true`.z, else: `false`.z),
-            self.then(`true`.tTimesTwoD, else: `false`.tTimesTwoD)
+fileprivate extension ProjectiveNiels {
+    func or(_ other: Self, if condition: CTBool) -> Self {
+        Self(
+            yPlusX.or(other.yPlusX, if: condition),
+            yMinusX.or(other.yMinusX, if: condition),
+            z.or(other.z, if: condition),
+            tTimesTwoD.or(other.tTimesTwoD, if: condition)
         )
     }
-    
-    func then(_ `true`: AffineNiels, else `false`: AffineNiels) -> AffineNiels {
-        AffineNiels(
-            self.then(`true`.yPlusX, else: `false`.yPlusX),
-            self.then(`true`.yMinusX, else: `false`.yMinusX),
-            self.then(`true`.xyTimesTwoD, else: `false`.xyTimesTwoD)
+}
+
+fileprivate extension AffineNiels {
+    func or(_ other: Self, if condition: CTBool) -> Self {
+        Self(
+            yPlusX.or(other.yPlusX, if: condition),
+            yMinusX.or(other.yMinusX, if: condition),
+            xyTimesTwoD.or(other.xyTimesTwoD, if: condition)
         )
     }
 }

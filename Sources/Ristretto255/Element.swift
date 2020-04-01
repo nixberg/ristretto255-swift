@@ -8,15 +8,6 @@ fileprivate let d = FieldElement(
     0x00052036cee2b6ff
 )
 
-extension Element {
-    public static let generator = Element(
-        FieldElement(0x00062d608f25d51a, 0x000412a4b4f6592a, 0x00075b7171a4b31d, 0x0001ff60527118fe, 0x000216936d3cd6e5),
-        FieldElement(0x0006666666666658, 0x0004cccccccccccc, 0x0001999999999999, 0x0003333333333333, 0x0006666666666666),
-        FieldElement(1),
-        FieldElement(0x00068ab3a5b7dda3, 0x00000eea2a5eadbb, 0x0002af8df483c27e, 0x000332b375274732, 0x00067875f0fd78b7)
-    )
-}
-
 fileprivate let generatorLookupTable = GeneratorLookupTable()
 
 public struct Element: Equatable {
@@ -24,13 +15,15 @@ public struct Element: Equatable {
     let y: FieldElement
     let z: FieldElement
     let t: FieldElement
-        
-    init() {
-        x = .zero
-        y = .one
-        z = .one
-        t = .zero
-    }
+    
+    static let zero = Self(.zero, .one, .one, .zero)
+    
+    public static let generator = Self(
+        FieldElement(0x00062d608f25d51a, 0x000412a4b4f6592a, 0x00075b7171a4b31d, 0x0001ff60527118fe, 0x000216936d3cd6e5),
+        FieldElement(0x0006666666666658, 0x0004cccccccccccc, 0x0001999999999999, 0x0003333333333333, 0x0006666666666666),
+        .one,
+        FieldElement(0x00068ab3a5b7dda3, 0x00000eea2a5eadbb, 0x0002af8df483c27e, 0x000332b375274732, 0x00067875f0fd78b7)
+    )
     
     init(_ x: FieldElement, _ y: FieldElement, _ z: FieldElement, _ t: FieldElement) {
         self.x = x
@@ -39,45 +32,58 @@ public struct Element: Equatable {
         self.t = t
     }
     
-    init(_ element: Completed) {
-       x = element.x * element.t
-       y = element.y * element.z
-       z = element.z * element.t
-       t = element.x * element.y
+    init(_ source: Completed) {
+       x = source.x * source.t
+       y = source.y * source.z
+       z = source.z * source.t
+       t = source.x * source.y
     }
     
-    public init?<D>(from data: D) where D: DataProtocol {
-        precondition(data.count == 32)
+    public init?<D>(from input: D) where D: DataProtocol {
+        precondition(input.count == 32)
         
-        let s = FieldElement(from: data)
-        guard zip(data, s.encoded()).map(^).reduce(0, |) == 0 else {
+        guard let s = FieldElement(from: input) else {
             return nil
         }
         
-        guard Bool(s.isPositive()) else {
+        if Bool(s.isNegative()) {
             return nil
         }
         
-        let sSquare = s.squared()
-        let u1 = .one - sSquare
-        let u2 = .one + sSquare
+        let sSquared = s.squared()
+        let u1 = .one - sSquared
+        let u2 = .one + sSquared
         let u2Squared = u2.squared()
         
         let v = -(d * u1.squared()) - u2Squared
         
-        let (wasSquare, inverseSquareRoot) = (v * u2Squared).inverseSquareRoot()
+        let (inverseSquareRoot, wasSquare) = (v * u2Squared).inverseSquareRoot()
         
         let denX = inverseSquareRoot * u2
         let denY = inverseSquareRoot * denX * v
         
-        x = abs((s + s) * denX)
+        x = abs(.two * s * denX)
         y = u1 * denY
         z = .one
         t = x * y
         
-        guard Bool(wasSquare && t.isPositive() && !y.isZero()) else {
+        if Bool(!wasSquare || t.isNegative() || y.isZero()) {
             return nil
         }
+    }
+    
+    public init<D>(fromUniformBytes input: D) where D: DataProtocol {
+        precondition(input.count == 64)
+        
+        let r0 = FieldElement(canonicalizing: input.prefix(32))
+        let r1 = FieldElement(canonicalizing: input.suffix(32))
+        
+        self = Self(mapping: r0) + Self(mapping: r1)
+    }
+    
+    public static func random() -> Self {
+        var rng = SystemRandomNumberGenerator()
+        return Self(fromUniformBytes: (0..<64).map { _ in rng.next() })
     }
     
     private init(mapping t: FieldElement) {
@@ -89,11 +95,11 @@ public struct Element: Equatable {
             0x0007ffffffffffff
         )
         let oneMinusDSquared = FieldElement(
-            0x00055aaa44ed4d20,
-            0x00059603c3332635,
-            0x00026d3baf4a7928,
-            0x000120a66e6997a9,
-            0x0005968b37af66c2
+            0x000409c1945fc176,
+            0x000719abc6a1fc4f,
+            0x0001c37f90b20684,
+            0x00006bccca55eedf,
+            0x000029072a8b2b3e
         )
         let dMinusOneSquared = FieldElement(
             0x00055aaa44ed4d20,
@@ -111,24 +117,25 @@ public struct Element: Equatable {
         )
         
         let r = squareRootMinusOne * t.squared()
+        var c = minusOne
         let u = (r + .one) * oneMinusDSquared
-        let v = (minusOne - r * d) * (r + d)
+        let v = (c - d * r) * (r + d)
         
-        var (wasSquare, s) = u.squareRoot(over: v)
+        var (s, wasSquare) = u.squareRoot(over: v)
         let sPrime = -abs(s * t)
-        s = wasSquare.then(s, else: sPrime)
-        let c = wasSquare.then(minusOne, else: r)
+        s = s.or(sPrime, if: !wasSquare)
+        c = c.or(r, if: !wasSquare)
         
         let n = c * (r - .one) * dMinusOneSquared - v
         
         let sSquared = s.squared()
         
-        let w0 = (s + s) * v
+        let w0 = .two * s * v
         let w1 = n * squareRootATimesDMinusOne
         let w2 = .one - sSquared
         let w3 = .one + sSquared
         
-        self = Element(
+        self = Self(
             w0 * w3,
             w2 * w1,
             w1 * w3,
@@ -136,18 +143,7 @@ public struct Element: Equatable {
         )
     }
     
-    public init<D>(fromUniformBytes data: D) where D: DataProtocol{
-        precondition(data.count == 64)
-        self = Element(mapping: FieldElement(from: data.prefix(32))) +
-               Element(mapping: FieldElement(from: data.suffix(32)))
-    }
-    
-    public static func random() -> Element {
-        var rng = SystemRandomNumberGenerator()
-        return Element(fromUniformBytes: (0..<64).map { _ in rng.next() })
-    }
-    
-    public func encoded() -> [UInt8] {
+    public func encode<M>(to output: inout M) where M: MutableDataProtocol {
         let inverseSquareRootMinusOneMinusD = FieldElement(
             0x0000fdaa805d40ea,
             0x0002eb482e57d339,
@@ -159,62 +155,66 @@ public struct Element: Equatable {
         let u1 = (z + y) * (z - y)
         let u2 = x * y
         
-        let (_, inverseSquareRoot) = (u1 * u2.squared()).inverseSquareRoot()
+        let inverseSquareRoot = (u1 * u2.squared()).inverseSquareRoot().result
         
         let den1 = u1 * inverseSquareRoot
         let den2 = u2 * inverseSquareRoot
         let zInverted = den1 * den2 * t
         
-        let rotate = (t * zInverted).isNegative()
-        let x = rotate.then(self.y * squareRootMinusOne, else: self.x)
-        var y = rotate.then(self.x * squareRootMinusOne, else: self.y)
-        let denInverted = rotate.then(den1 * inverseSquareRootMinusOneMinusD, else: den2)
+        let mustRotate = (t * zInverted).isNegative()
+        let x = self.x.or(self.y * squareRootMinusOne, if: mustRotate)
+        var y = self.y.or(self.x * squareRootMinusOne, if: mustRotate)
+        let denInverted = den2.or(den1 * inverseSquareRootMinusOneMinusD, if: mustRotate)
         
-        y = (x * zInverted).isNegative().then(-y, else: y)
+        y.negate(if: (x * zInverted).isNegative())
         
-        let s = abs(denInverted * (z - y))
-        
-        return s.encoded()
+        abs(denInverted * (z - y)).encode(to: &output)
     }
     
-    public static func == (lhs: Element, rhs: Element) -> Bool {
+    public func encoded() -> [UInt8] {
+        var output = [UInt8]()
+        output.reserveCapacity(32)
+        self.encode(to: &output)
+        return output
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         Bool((lhs.x * rhs.y == lhs.y * rhs.x) || (lhs.y * rhs.y == lhs.x * rhs.x))
     }
     
-    public static func + (lhs: Element, rhs: Element) -> Element {
-        Element(lhs + ProjectiveNiels(rhs))
+    public static func + (lhs: Self, rhs: Self) -> Self {
+        Self(lhs + ProjectiveNiels(rhs))
     }
     
-    public static func - (lhs: Element, rhs: Element) -> Element {
-        Element(lhs - ProjectiveNiels(rhs))
+    public static func - (lhs: Self, rhs: Self) -> Self {
+        Self(lhs - ProjectiveNiels(rhs))
     }
     
-    public static func * (lhs: Scalar, rhs: Element) -> Element {
-        let lookupTable = LookupTable(from: rhs)
-        let digits = lhs.radix16()
-        let initial = Element() + lookupTable[digits[63]]
-        return Element(digits.prefix(63).reversed().reduce(initial, {
-            $0.times16() + lookupTable[$1]
-        }))
+    public static func * (lhs: Scalar, rhs: Self) -> Self {
+        let lookupTable = LookupTable(for: rhs)
+        let digits = SignedRadix16(from: lhs)
+        return Self((0..<63).reversed().reduce(.zero + lookupTable[digits[63]]) {
+            $0.multipliedBy16() + lookupTable[digits[$1]]
+        })
     }
     
-    func times2(_ k: UInt32) -> Element {
-        Element((0..<(k &- 1)).reduce(Projective(self), { (e, _) in
-            Projective(e.doubled())
-        }).doubled())
+    func doubledRepeatedly(count: Int) -> Self {
+        Self((0..<(count - 1)).reduce(Projective(self)) { element, _ in
+            Projective(element.doubled())
+        }.doubled())
     }
     
     public init(generatorTimes scalar: Scalar) {
-        let digits = scalar.radix16()
+        let digits = SignedRadix16(from: scalar)
         
-        var sum = stride(from: 1, to: 64, by: 2).reduce(Element(), { (e, i) in
-            Element(e + generatorLookupTable[i / 2, digits[i]])
-        })
+        var sum = stride(from: 1, to: 64, by: 2).reduce(.zero) {
+            Self($0 + generatorLookupTable[$1 / 2, digits[$1]])
+        }
         
-        sum = sum.times2(4)
+        sum = sum.doubledRepeatedly(count: 4)
         
-        self = stride(from: 0, to: 64, by: 2).reduce(sum, { (e, i) in
-            Element(e + generatorLookupTable[i / 2, digits[i]])
-        })
+        self = stride(from: 0, to: 64, by: 2).reduce(sum) {
+            Self($0 + generatorLookupTable[$1 / 2, digits[$1]])
+        }
     }
 }

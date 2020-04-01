@@ -1,4 +1,4 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.2
 
 import PackageDescription
 
@@ -9,11 +9,9 @@ let package = Package(
             name: "Ristretto255",
             targets: ["Ristretto255"]),
     ],
-    dependencies: [],
     targets: [
         .target(
-            name: "Ristretto255",
-            dependencies: []),
+            name: "Ristretto255"),
         .testTarget(
             name: "Ristretto255Tests",
             dependencies: ["Ristretto255"]),

@@ -1,4 +1,4 @@
-fileprivate let dTimesTwo = FieldElement(
+fileprivate let twoD = FieldElement(
     0x00069b9426b2f159,
     0x00035050762add7a,
     0x0003cf44c0038052,
@@ -19,11 +19,10 @@ struct Completed {
         self.t = t
     }
     
-    func times16() -> Element {
-        let two = Projective(self).doubled()
-        let four = Projective(two).doubled()
-        let eight = Projective(four).doubled()
-        return Element(Projective(eight).doubled())
+    func multipliedBy16() -> Element {
+        Element((0..<4).reduce(self) { element, _ in
+            Projective(element).doubled()
+        })
     }
 }
 
@@ -32,27 +31,22 @@ struct Projective {
     let y: FieldElement
     let z: FieldElement
     
-    init() {
-        x = .zero
-        y = .one
-        z = .one
+    init(_ source: Completed) {
+        x = source.x * source.t
+        y = source.y * source.z
+        z = source.z * source.t
     }
     
-    init(_ element: Completed) {
-        x = element.x * element.t
-        y = element.y * element.z
-        z = element.z * element.t
-    }
-    
-    init(_ element: Element) {
-        x = element.x
-        y = element.y
-        z = element.z
+    init(_ source: Element) {
+        x = source.x
+        y = source.y
+        z = source.z
     }
     
     func doubled() -> Completed {
         let xSquared = x.squared()
         let ySquared = y.squared()
+        let zSquared = z.squared()
         let ySquaredPlusXSquared = ySquared + xSquared
         let ySquaredMinusXSquared = ySquared - xSquared
         
@@ -60,7 +54,7 @@ struct Projective {
             (x + y).squared() - ySquaredPlusXSquared,
             ySquaredPlusXSquared,
             ySquaredMinusXSquared,
-            z.squaredTimesTwo() - ySquaredMinusXSquared
+            (zSquared + zSquared) - ySquaredMinusXSquared
         )
     }
 }
@@ -71,12 +65,7 @@ struct ProjectiveNiels {
     let z: FieldElement
     let tTimesTwoD: FieldElement
     
-    init() {
-        yPlusX = .one
-        yMinusX = .one
-        z = .one
-        tTimesTwoD = .zero
-    }
+    static let zero = Self(.one, .one, .one, .zero)
     
     init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ z: FieldElement, _ tTimes2D: FieldElement) {
         self.yPlusX = yPlusX
@@ -85,49 +74,49 @@ struct ProjectiveNiels {
         self.tTimesTwoD = tTimes2D
     }
     
-    init(_ element: Element) {
-        yPlusX = element.y + element.x
-        yMinusX = element.y - element.x
-        z = element.z
-        tTimesTwoD = element.t * dTimesTwo
+    init(_ other: Element) {
+        yPlusX = other.y + other.x
+        yMinusX = other.y - other.x
+        z = other.z
+        tTimesTwoD = other.t * twoD
     }
     
-    prefix static func - (x: ProjectiveNiels) -> ProjectiveNiels {
-        ProjectiveNiels(
-            x.yMinusX,
-            x.yPlusX,
-            x.z,
-            -x.tTimesTwoD
+    prefix static func - (operand: Self) -> Self {
+        Self(
+            operand.yMinusX,
+            operand.yPlusX,
+            operand.z,
+            -operand.tTimesTwoD
         )
     }
     
-    static func + (lhs: Element, rhs: ProjectiveNiels) -> Completed {
+    static func + (lhs: Element, rhs: Self) -> Completed {
         let pp = (lhs.y + lhs.x) * rhs.yPlusX
         let mm = (lhs.y - lhs.x) * rhs.yMinusX
         let ttTimesTwoD = lhs.t * rhs.tTimesTwoD
         let zz = lhs.z * rhs.z
-        let zzTimesTwo = zz + zz
-
+        let twoZZ = zz + zz
+        
         return Completed(
             pp - mm,
             pp + mm,
-            zzTimesTwo + ttTimesTwoD,
-            zzTimesTwo - ttTimesTwoD
+            twoZZ + ttTimesTwoD,
+            twoZZ - ttTimesTwoD
         )
     }
     
-    static func - (lhs: Element, rhs: ProjectiveNiels) -> Completed {
+    static func - (lhs: Element, rhs: Self) -> Completed {
         let pm = (lhs.y + lhs.x) * rhs.yMinusX
         let mp = (lhs.y - lhs.x) * rhs.yPlusX
         let ttTimesTwoD = lhs.t * rhs.tTimesTwoD
         let zz = lhs.z * rhs.z
-        let zzTimesTwo = zz + zz
+        let twoZZ = zz + zz
         
         return Completed(
             pm - mp,
             pm + mp,
-            zzTimesTwo - ttTimesTwoD,
-            zzTimesTwo + ttTimesTwoD
+            twoZZ - ttTimesTwoD,
+            twoZZ + ttTimesTwoD
         )
     }
 }
@@ -137,11 +126,7 @@ struct AffineNiels {
     let yMinusX: FieldElement
     let xyTimesTwoD: FieldElement
     
-    init() {
-        yPlusX = .one
-        yMinusX = .one
-        xyTimesTwoD = .zero
-    }
+    static let zero = Self(.one, .one, .zero)
     
     init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ xyTimes2D: FieldElement) {
         self.yPlusX = yPlusX
@@ -155,28 +140,28 @@ struct AffineNiels {
         let y = element.y * zInverted
         yPlusX = y + x
         yMinusX = y - x
-        xyTimesTwoD = (x * y) * dTimesTwo
+        xyTimesTwoD = (x * y) * twoD
     }
     
-    prefix static func - (p: AffineNiels) -> AffineNiels {
-        AffineNiels(
-            p.yMinusX,
-            p.yPlusX,
-            -p.xyTimesTwoD
+    prefix static func - (operand: Self) -> Self {
+        Self(
+            operand.yMinusX,
+            operand.yPlusX,
+            -operand.xyTimesTwoD
         )
     }
     
-    static func + (lhs: Element, rhs: AffineNiels) -> Completed {
+    static func + (lhs: Element, rhs: Self) -> Completed {
         let pp = (lhs.y + lhs.x) * rhs.yPlusX
         let mm = (lhs.y - lhs.x) * rhs.yMinusX
         let tTimesXYTimesTwoD = lhs.t * rhs.xyTimesTwoD
-        let zTimesTwo = lhs.z + lhs.z
+        let twoZ = lhs.z + lhs.z
         
         return Completed(
             pp - mm,
             pp + mm,
-            zTimesTwo + tTimesXYTimesTwoD,
-            zTimesTwo - tTimesXYTimesTwoD
+            twoZ + tTimesXYTimesTwoD,
+            twoZ - tTimesXYTimesTwoD
         )
     }
 }

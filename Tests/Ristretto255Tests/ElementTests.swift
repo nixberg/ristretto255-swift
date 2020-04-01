@@ -2,83 +2,159 @@ import XCTest
 @testable import Ristretto255
 
 final class ElementTest: XCTestCase {
-    func testRoundtripIdentity() {
-        let identityBytes = [UInt8](repeating: 0, count: 32)
-        XCTAssertEqual(identityBytes, Element(from: identityBytes)!.encoded())
-        XCTAssertEqual(identityBytes, Element().encoded())
+    func testZeroRoundtrip() {
+        let bytes: [UInt8] = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000"
+        let zero = Element(from: bytes)
+        XCTAssertNotNil(zero)
+        XCTAssertEqual(zero, Element.zero)
+        XCTAssertEqual(zero?.encoded(), bytes)
+        XCTAssertEqual(Element.zero.encoded(), bytes)
     }
     
-    func testRoundtripGenerator() {
-        let generatorBytes: [UInt8] = [
-            0xe2, 0xf2, 0xae, 0x0a, 0x6a, 0xbc, 0x4e, 0x71,
-            0xa8, 0x84, 0xa9, 0x61, 0xc5, 0x00, 0x51, 0x5f,
-            0x58, 0xe3, 0x0b, 0x6a, 0xa5, 0x82, 0xdd, 0x8d,
-            0xb6, 0xa6, 0x59, 0x45, 0xe0, 0x8d, 0x2d, 0x76
-        ]
-        let decodedGenerator = Element(from: generatorBytes)!
-        XCTAssertEqual(Element.generator, decodedGenerator)
-        XCTAssertEqual(generatorBytes, decodedGenerator.encoded())
-        XCTAssertEqual(generatorBytes, Element.generator.encoded())
+    func testGeneratorRoundtrip() {
+        let bytes: [UInt8] = "e2f2ae0a 6abc4e71 a884a961 c500515f 58e30b6a a582dd8d b6a65945 e08d2d76"
+        let generator = Element(from: bytes)
+        XCTAssertNotNil(generator)
+        XCTAssertEqual(generator, Element.generator)
+        XCTAssertEqual(generator?.encoded(), bytes)
+        XCTAssertEqual(Element.generator.encoded(), bytes)
     }
     
-    func testEncodingsOfBasepointMultiples() {
-        let encodings: [[UInt8]] = [
-            [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-            [0xe2, 0xf2, 0xae, 0x0a, 0x6a, 0xbc, 0x4e, 0x71, 0xa8, 0x84, 0xa9, 0x61, 0xc5, 0x00, 0x51, 0x5f,
-             0x58, 0xe3, 0x0b, 0x6a, 0xa5, 0x82, 0xdd, 0x8d, 0xb6, 0xa6, 0x59, 0x45, 0xe0, 0x8d, 0x2d, 0x76],
-            [0x6a, 0x49, 0x32, 0x10, 0xf7, 0x49, 0x9c, 0xd1, 0x7f, 0xec, 0xb5, 0x10, 0xae, 0x0c, 0xea, 0x23,
-             0xa1, 0x10, 0xe8, 0xd5, 0xb9, 0x01, 0xf8, 0xac, 0xad, 0xd3, 0x09, 0x5c, 0x73, 0xa3, 0xb9, 0x19],
-            [0x94, 0x74, 0x1f, 0x5d, 0x5d, 0x52, 0x75, 0x5e, 0xce, 0x4f, 0x23, 0xf0, 0x44, 0xee, 0x27, 0xd5,
-             0xd1, 0xea, 0x1e, 0x2b, 0xd1, 0x96, 0xb4, 0x62, 0x16, 0x6b, 0x16, 0x15, 0x2a, 0x9d, 0x02, 0x59],
-            [0xda, 0x80, 0x86, 0x27, 0x73, 0x35, 0x8b, 0x46, 0x6f, 0xfa, 0xdf, 0xe0, 0xb3, 0x29, 0x3a, 0xb3,
-             0xd9, 0xfd, 0x53, 0xc5, 0xea, 0x6c, 0x95, 0x53, 0x58, 0xf5, 0x68, 0x32, 0x2d, 0xaf, 0x6a, 0x57],
-            [0xe8, 0x82, 0xb1, 0x31, 0x01, 0x6b, 0x52, 0xc1, 0xd3, 0x33, 0x70, 0x80, 0x18, 0x7c, 0xf7, 0x68,
-             0x42, 0x3e, 0xfc, 0xcb, 0xb5, 0x17, 0xbb, 0x49, 0x5a, 0xb8, 0x12, 0xc4, 0x16, 0x0f, 0xf4, 0x4e],
-            [0xf6, 0x47, 0x46, 0xd3, 0xc9, 0x2b, 0x13, 0x05, 0x0e, 0xd8, 0xd8, 0x02, 0x36, 0xa7, 0xf0, 0x00,
-             0x7c, 0x3b, 0x3f, 0x96, 0x2f, 0x5b, 0xa7, 0x93, 0xd1, 0x9a, 0x60, 0x1e, 0xbb, 0x1d, 0xf4, 0x03],
-            [0x44, 0xf5, 0x35, 0x20, 0x92, 0x6e, 0xc8, 0x1f, 0xbd, 0x5a, 0x38, 0x78, 0x45, 0xbe, 0xb7, 0xdf,
-             0x85, 0xa9, 0x6a, 0x24, 0xec, 0xe1, 0x87, 0x38, 0xbd, 0xcf, 0xa6, 0xa7, 0x82, 0x2a, 0x17, 0x6d],
-            [0x90, 0x32, 0x93, 0xd8, 0xf2, 0x28, 0x7e, 0xbe, 0x10, 0xe2, 0x37, 0x4d, 0xc1, 0xa5, 0x3e, 0x0b,
-             0xc8, 0x87, 0xe5, 0x92, 0x69, 0x9f, 0x02, 0xd0, 0x77, 0xd5, 0x26, 0x3c, 0xdd, 0x55, 0x60, 0x1c],
-            [0x02, 0x62, 0x2a, 0xce, 0x8f, 0x73, 0x03, 0xa3, 0x1c, 0xaf, 0xc6, 0x3f, 0x8f, 0xc4, 0x8f, 0xdc,
-             0x16, 0xe1, 0xc8, 0xc8, 0xd2, 0x34, 0xb2, 0xf0, 0xd6, 0x68, 0x52, 0x82, 0xa9, 0x07, 0x60, 0x31],
-            [0x20, 0x70, 0x6f, 0xd7, 0x88, 0xb2, 0x72, 0x0a, 0x1e, 0xd2, 0xa5, 0xda, 0xd4, 0x95, 0x2b, 0x01,
-             0xf4, 0x13, 0xbc, 0xf0, 0xe7, 0x56, 0x4d, 0xe8, 0xcd, 0xc8, 0x16, 0x68, 0x9e, 0x2d, 0xb9, 0x5f],
-            [0xbc, 0xe8, 0x3f, 0x8b, 0xa5, 0xdd, 0x2f, 0xa5, 0x72, 0x86, 0x4c, 0x24, 0xba, 0x18, 0x10, 0xf9,
-             0x52, 0x2b, 0xc6, 0x00, 0x4a, 0xfe, 0x95, 0x87, 0x7a, 0xc7, 0x32, 0x41, 0xca, 0xfd, 0xab, 0x42],
-            [0xe4, 0x54, 0x9e, 0xe1, 0x6b, 0x9a, 0xa0, 0x30, 0x99, 0xca, 0x20, 0x8c, 0x67, 0xad, 0xaf, 0xca,
-             0xfa, 0x4c, 0x3f, 0x3e, 0x4e, 0x53, 0x03, 0xde, 0x60, 0x26, 0xe3, 0xca, 0x8f, 0xf8, 0x44, 0x60],
-            [0xaa, 0x52, 0xe0, 0x00, 0xdf, 0x2e, 0x16, 0xf5, 0x5f, 0xb1, 0x03, 0x2f, 0xc3, 0x3b, 0xc4, 0x27,
-             0x42, 0xda, 0xd6, 0xbd, 0x5a, 0x8f, 0xc0, 0xbe, 0x01, 0x67, 0x43, 0x6c, 0x59, 0x48, 0x50, 0x1f],
-            [0x46, 0x37, 0x6b, 0x80, 0xf4, 0x09, 0xb2, 0x9d, 0xc2, 0xb5, 0xf6, 0xf0, 0xc5, 0x25, 0x91, 0x99,
-             0x08, 0x96, 0xe5, 0x71, 0x6f, 0x41, 0x47, 0x7c, 0xd3, 0x00, 0x85, 0xab, 0x7f, 0x10, 0x30, 0x1e],
-            [0xe0, 0xc4, 0x18, 0xf7, 0xc8, 0xd9, 0xc4, 0xcd, 0xd7, 0x39, 0x5b, 0x93, 0xea, 0x12, 0x4f, 0x3a,
-             0xd9, 0x90, 0x21, 0xbb, 0x68, 0x1d, 0xfc, 0x33, 0x02, 0xa9, 0xd9, 0x9a, 0x2e, 0x53, 0xe6, 0x4e]
-        ]
-        var sum = Element()
-        for bytes in encodings {
-            XCTAssertEqual(bytes, sum.encoded())
-            sum = sum + Element.generator
+    func testRandomRoundtrip() {
+        for _ in 0..<32 {
+            let element = Element(generatorTimes: .random())
+            XCTAssertEqual(Element(from: element.encoded()), element)
         }
     }
     
-    func testRoundtripRandomElement() {
-        for _ in 0..<256 {
-            XCTAssertNoThrow(Element.random().encoded()) // TODO: Doesn't throw yet.
+    func testGeneratorMultiples() {
+        let vectors: [[UInt8]] = [
+            "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
+            "e2f2ae0a 6abc4e71 a884a961 c500515f 58e30b6a a582dd8d b6a65945 e08d2d76",
+            "6a493210 f7499cd1 7fecb510 ae0cea23 a110e8d5 b901f8ac add3095c 73a3b919",
+            "94741f5d 5d52755e ce4f23f0 44ee27d5 d1ea1e2b d196b462 166b1615 2a9d0259",
+            "da808627 73358b46 6ffadfe0 b3293ab3 d9fd53c5 ea6c9553 58f56832 2daf6a57",
+            "e882b131 016b52c1 d3337080 187cf768 423efccb b517bb49 5ab812c4 160ff44e",
+            "f64746d3 c92b1305 0ed8d802 36a7f000 7c3b3f96 2f5ba793 d19a601e bb1df403",
+            "44f53520 926ec81f bd5a3878 45beb7df 85a96a24 ece18738 bdcfa6a7 822a176d",
+            "903293d8 f2287ebe 10e2374d c1a53e0b c887e592 699f02d0 77d5263c dd55601c",
+            "02622ace 8f7303a3 1cafc63f 8fc48fdc 16e1c8c8 d234b2f0 d6685282 a9076031",
+            "20706fd7 88b2720a 1ed2a5da d4952b01 f413bcf0 e7564de8 cdc81668 9e2db95f",
+            "bce83f8b a5dd2fa5 72864c24 ba1810f9 522bc600 4afe9587 7ac73241 cafdab42",
+            "e4549ee1 6b9aa030 99ca208c 67adafca fa4c3f3e 4e5303de 6026e3ca 8ff84460",
+            "aa52e000 df2e16f5 5fb1032f c33bc427 42dad6bd 5a8fc0be 0167436c 5948501f",
+            "46376b80 f409b29d c2b5f6f0 c5259199 0896e571 6f41477c d30085ab 7f10301e",
+            "e0c418f7 c8d9c4cd d7395b93 ea124f3a d99021bb 681dfc33 02a9d99a 2e53e64e"
+        ]
+        
+        for (element, vector) in zip(sequence(first: Element.zero) { $0 + .generator }, vectors) {
+            XCTAssertEqual(element.encoded(), vector)
+            XCTAssertEqual(Element(from: vector), element)
+        }
+    }
+    
+    func testInvalidEncodings() {
+        let vectors: [[UInt8]] = [
+            // Non-canonical field encodings.
+            "00ffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff",
+            "ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffff7f",
+            "f3ffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffff7f",
+            "edffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffff7f",
+            
+            // Negative field elements.
+            "01000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
+            "01ffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffff7f",
+            "ed57ffd8 c914fb20 1471d1c3 d245ce3c 746fcbe6 3a3679d5 1b6a516e bebe0e20",
+            "c34c4e18 26e5d403 b78e246e 88aa051c 36ccf0aa febffe13 7d148a2b f9104562",
+            "c940e5a4 404157cf b1628b10 8db051a8 d439e1a4 21394ec4 ebccb9ec 92a8ac78",
+            "47cfc549 7c53dc8e 61c91d17 fd626ffb 1c49e2bc a94eed05 2281b510 b1117a24",
+            "f1c6165d 33367351 b0da8f6e 4511010c 68174a03 b6581212 c71c0e1d 026c3c72",
+            "87260f7a 2f124951 18360f02 c26a470f 450dadf3 4a413d21 042b43b9 d93e1309",
+            
+            // Non-square x^2.
+            "26948d35 ca62e643 e26a8317 7332e6b6 afeb9d08 e4268b65 0f1f5bbd 8d81d371",
+            "4eac077a 713c57b4 f4397629 a4145982 c661f480 44dd3f96 427d40b1 47d9742f",
+            "de6a7b00 deadc788 eb6b6c8d 20c0ae96 c2f20190 78fa604f ee5b87d6 e989ad7b",
+            "bcab477b e20861e0 1e4a0e29 5284146a 510150d9 817763ca f1a6f4b4 22d67042",
+            "2a292df7 e32cabab bd9de088 d1d1abec 9fc0440f 637ed2fb a145094d c14bea08",
+            "f4a9e534 fc0d216c 44b218fa 0c42d996 35a0127e e2e53c71 2f706096 49fdff22",
+            "8268436f 8c412619 6cf64b3c 7ddbda90 746a3786 25f9813d d9b84570 77256731",
+            "2810e5cb c2cc4d4e ece54f61 c6f69758 e289aa7a b440b3cb eaa21995 c2f4232b",
+            
+            // Negative xy value.
+            "3eb858e7 8f5a7254 d8c97311 74a94f76 755fd394 1c0ac937 35c07ba1 4579630e",
+            "a45fdc55 c76448c0 49a1ab33 f17023ed fb2be358 1e9c7aad e8a61252 15e04220",
+            "d483fe81 3c6ba647 ebbfd3ec 41adca1c 6130c2be eee9d9bf 065c8d15 1c5f396e",
+            "8a2e1d30 050198c6 5a544831 23960ccc 38aef684 8e1ec8f5 f780e852 3769ba32",
+            "32888462 f8b486c6 8ad7dd96 10be5192 bbeaf3b4 43951ac1 a8118419 d9fa097b",
+            "22714250 1b9d4355 ccba2904 04bde415 75b03769 3cef1f43 8c47f8fb f35d1165",
+            "5c37cc49 1da847cf eb9281d4 07efc41e 15144c87 6e0170b4 99a96a22 ed31e01e",
+            "44542511 7cb8c90e dcbc7c1c c0e74f74 7f2c1efa 5630a967 c64f2877 92a48a4b",
+            
+            // s = -1, which causes y = 0.
+            "ecffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffff7f"
+        ]
+        
+        for vector in vectors {
+            XCTAssertNil(Element(from: vector))
+        }
+    }
+    
+    func testFromUniformBytes() {
+        let vectors: [(input: [UInt8], expected: [UInt8])] = [
+            (
+                "5d1be09e3d0c82fc538112490e35701979d99e06ca3e2b5b54bffe8b4dc772c1"
+                    + "4d98b696a1bbfb5ca32c436cc61c16563790306c79eaca7705668b47dffe5bb6",
+                "3066f82a 1a747d45 120d1740 f1435853 1a8f04bb ffe6a819 f86dfe50 f44a0a46"
+            ),
+            (
+                "f116b34b8f17ceb56e8732a60d913dd10cce47a6d53bee9204be8b44f6678b27"
+                    + "0102a56902e2488c46120e9276cfe54638286b9e4b3cdb470b542d46c2068d38",
+                "f26e5b6f 7d362d2d 2a94c5d0 e7602cb4 773c95a2 e5c31a64 f133189f a76ed61b"
+            ),
+            (
+                "8422e1bbdaab52938b81fd602effb6f89110e1e57208ad12d9ad767e2e25510c"
+                    + "27140775f9337088b982d83d7fcf0b2fa1edffe51952cbe7365e95c86eaf325c",
+                "006ccd2a 9e6867e6 a2c5cea8 3d3302cc 9de128dd 2a9a57dd 8ee7b9d7 ffe02826"
+            ),
+            (
+                "ac22415129b61427bf464e17baee8db65940c233b98afce8d17c57beeb7876c2"
+                    + "150d15af1cb1fb824bbd14955f2b57d08d388aab431a391cfc33d5bafb5dbbaf",
+                "f8f0c87c f237953c 5890aec3 99816900 5dae3eca 1fbb0454 8c635953 c817f92a"
+            ),
+            (
+                "165d697a1ef3d5cf3c38565beefcf88c0f282b8e7dbd28544c483432f1cec767"
+                    + "5debea8ebb4e5fe7d6f6e5db15f15587ac4d4d4a1de7191e0c1ca6664abcc413",
+                "ae81e7de df20a497 e10c304a 765c1767 a42d6e06 029758d2 d7e8ef7c c4c41179"
+            ),
+            (
+                "a836e6c9a9ca9f1e8d486273ad56a78c70cf18f0ce10abb1c7172ddd605d7fd2"
+                    + "979854f47ae1ccf204a33102095b4200e5befc0465accc263175485f0e17ea5c",
+                "e2705652 ff9f5e44 d3e841bf 1c251cf7 dddb77d1 40870d1a b2ed64f1 a9ce8628"
+            ),
+            (
+                "2cdc11eaeb95daf01189417cdddbf95952993aa9cb9c640eb5058d09702c7462"
+                    + "2c9965a697a3b345ec24ee56335b556e677b30e6f90ac77d781064f866a3c982",
+                "80bd0726 2511cdde 4863f8a7 434cef69 6750681c b9510eea 557088f7 6d9e5065"
+            )
+        ]
+        
+        for (input, expected) in vectors {
+            XCTAssertEqual(Element(fromUniformBytes: input).encoded(), expected)
         }
     }
     
     func testScalarMultiplication() {
         let scalar = Scalar(129, 0, 0, 0, 0)
-        let sum = (0..<129).reduce(Element(), { (p, _) in p + Element.generator })
-        XCTAssertEqual(scalar * Element.generator, sum)
-        XCTAssertEqual(Element(generatorTimes: scalar), sum)
-        XCTAssertEqual(Element(generatorTimes: scalar), scalar * Element.generator)
+        let expected = (0..<129).reduce(.zero) { element, _ in element + .generator }
         
-        for _ in 0..<16 {
-            let s = Scalar.random()
-            XCTAssertEqual(Element(generatorTimes: s), s * Element.generator)
+        XCTAssertEqual(scalar * Element.generator, expected)
+        XCTAssertEqual(Element(generatorTimes: scalar), expected)
+        XCTAssertEqual(Element(generatorTimes: scalar), scalar * .generator)
+        
+        for _ in 0..<32 {
+            let scalar = Scalar.random()
+            XCTAssertEqual(Element(generatorTimes: scalar), scalar * .generator)
         }
     }
     
@@ -99,8 +175,7 @@ final class ElementTest: XCTestCase {
         let secretEphemeral = Scalar.random()
         let publicEphemeral = Element(generatorTimes: secretEphemeral)
         
-        var rng = SystemRandomNumberGenerator()
-        let c = Scalar(fromUniformBytes: (0..<64).map { _ in rng.next() })
+        let c = Scalar.random()
         let t = secretEphemeral + c * secretStatic
         
         let lhs = Element(generatorTimes: t)
@@ -108,4 +183,25 @@ final class ElementTest: XCTestCase {
         
         XCTAssertEqual(lhs, rhs)
     }
+}
+
+extension Array: ExpressibleByStringLiteral where Element == UInt8 {
+    public typealias StringLiteralType = String
+    
+    public init(stringLiteral hex: Self.StringLiteralType) {
+        var hex = hex.components(separatedBy: .whitespaces).joined()[...]
+        precondition(hex.count.isMultiple(of: 2))
+        self = stride(from: 0, to: hex.count, by: 2).map { _ in
+            defer { hex = hex.dropFirst(2) }
+            return UInt8(hex.prefix(2), radix: 16)!
+        }
+    }
+}
+
+extension Array: ExpressibleByUnicodeScalarLiteral where Element == UInt8 {
+    public typealias UnicodeScalarLiteralType = String
+}
+
+extension Array: ExpressibleByExtendedGraphemeClusterLiteral where Element == UInt8 {
+    public typealias ExtendedGraphemeClusterLiteralType = String
 }

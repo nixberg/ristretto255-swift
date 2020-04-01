@@ -1,6 +1,6 @@
 import Foundation
 
-fileprivate let mask: UInt64 = (1 << 52) - 1
+fileprivate let mask52: UInt64 = (1 << 52) - 1
 
 fileprivate let order = Scalar(
     0x0002631a5cf5d3ed,
@@ -33,13 +33,7 @@ public struct Scalar {
     private let d: UInt64
     private let e: UInt64
     
-    public init() {
-        a = 0
-        b = 0
-        c = 0
-        d = 0
-        e = 0
-    }
+    static let zero = Self(0, 0, 0, 0, 0)
     
     init(_ a: UInt64, _ b: UInt64, _ c: UInt64, _ d: UInt64, _ e: UInt64) {
         self.a = a
@@ -49,239 +43,238 @@ public struct Scalar {
         self.e = e
     }
     
-    public init?<D>(from data: D) where D: DataProtocol {
-        precondition(data.count == 32)
+    public init?<D>(from input: D) where D: DataProtocol {
+        precondition(input.count == 32)
         
-        var words = [UInt64](repeating: 0, count: 4)
-        for (i, byte) in data.enumerated() {
-            words[i / 8] |= UInt64(byte) &<< (8 &* (i % 8))
-        }
+        let scalar = SIMD4<UInt64>(fromLittleEndianBytes: input)
         
-        guard words.isMinimal() else {
+        guard scalar.isMinimal() else {
             return nil
         }
         
-        a = (                  words[0] &<<  0) & mask
-        b = (words[0] &>> 52 | words[1] &<< 12) & mask
-        c = (words[1] &>> 40 | words[2] &<< 24) & mask
-        d = (words[2] &>> 28 | words[3] &<< 36) & mask
-        e = (words[3] &>> 16                  ) & mask >> 4
+        a = (                     (scalar[0] &<<  0)) & mask52
+        b = ((scalar[0] &>> 52) | (scalar[1] &<< 12)) & mask52
+        c = ((scalar[1] &>> 40) | (scalar[2] &<< 24)) & mask52
+        d = ((scalar[2] &>> 28) | (scalar[3] &<< 36)) & mask52
+        e = ((scalar[3] &>> 16)                     )
     }
     
-    public init<D>(fromUniformBytes data: D) where D: DataProtocol {
-        precondition(data.count == 64)
+    public init<D>(fromUniformBytes input: D) where D: DataProtocol {
+        precondition(input.count == 64)
         
-        var words = [UInt64](repeating: 0, count: 8)
-        for (i, byte) in data.enumerated() {
-            words[i / 8] |= UInt64(byte) &<< (8 * (i % 8))
-        }
+        let x = SIMD4<UInt64>(fromLittleEndianBytes: input.prefix(32))
+        let y = SIMD4<UInt64>(fromLittleEndianBytes: input.suffix(32))
         
         let low = Scalar(
-            (                  words[0] &<<  0) & mask,
-            (words[0] &>> 52 | words[1] &<< 12) & mask,
-            (words[1] &>> 40 | words[2] &<< 24) & mask,
-            (words[2] &>> 28 | words[3] &<< 32) & mask,
-            (words[3] &>> 16 | words[4] &<< 48) & mask
-        )
+            (                (x[0] &<<  0)) & mask52,
+            ((x[0] &>> 52) | (x[1] &<< 12)) & mask52,
+            ((x[1] &>> 40) | (x[2] &<< 24)) & mask52,
+            ((x[2] &>> 28) | (x[3] &<< 32)) & mask52,
+            ((x[3] &>> 16) | (y[0] &<< 48)) & mask52
+        ).montgomeryMultiplied(with: montgomeryRadix)
         
         let high = Scalar(
-            (words[4] &>>  4                  ) & mask,
-            (words[4] &>> 56 | words[5] &<<  8) & mask,
-            (words[5] &>> 44 | words[6] &<< 20) & mask,
-            (words[6] &>> 32 | words[7] &<< 32) & mask,
-            (words[7] &>> 20                  )
-        )
+            ((y[0] &>>  4)                ) & mask52,
+            ((y[0] &>> 56) | (y[1] &<<  8)) & mask52,
+            ((y[1] &>> 44) | (y[2] &<< 20)) & mask52,
+            ((y[2] &>> 32) | (y[3] &<< 32)) & mask52,
+            ((y[3] &>> 20)                )
+        ).montgomeryMultiplied(with: montgomeryRadixSquared)
         
-        self = Scalar.reduce(Scalar.multiply(low, montgomeryRadix)) +
-               Scalar.reduce(Scalar.multiply(high, montgomeryRadixSquared))
+        self = low + high
     }
     
-    public static func random() -> Scalar {
+    public static func random() -> Self {
         var rng = SystemRandomNumberGenerator()
-        return Scalar(fromUniformBytes: (0..<64).map { _ in rng.next() })
+        return Self(fromUniformBytes: (0..<64).map { _ in rng.next() })
     }
     
-    public func encode<M>(to data: inout M) where M: MutableDataProtocol {
-        data.append(contentsOf: [
-            a &>>  0,
-            a &>>  8,
-            a &>> 16,
-            a &>> 24,
-            a &>> 32,
-            a &>> 40,
-            a &>> 48 | b &<< 4,
-            
-            b &>>  4,
-            b &>> 12,
-            b &>> 20,
-            b &>> 28,
-            b &>> 36,
-            b &>> 44,
-            
-            c &>>  0,
-            c &>>  8,
-            c &>> 16,
-            c &>> 24,
-            c &>> 32,
-            c &>> 40,
-            c &>> 48 | d &<< 4,
-            
-            d &>>  4,
-            d &>> 12,
-            d &>> 20,
-            d &>> 28,
-            d &>> 36,
-            d &>> 44,
-            
-            e &>>  0,
-            e &>>  8,
-            e &>> 16,
-            e &>> 24,
-            e &>> 32,
-            e &>> 40
-        ].map {
-            UInt8(truncatingIfNeeded: $0)
-        })
+    public func encode<M>(to output: inout M) where M: MutableDataProtocol {
+        for n in stride(from: 0, to: 48, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: a &>> n))
+        }
+        output.append(UInt8(truncatingIfNeeded: (a &>> 48) | (b &<< 4)))
+        
+        for n in stride(from: 4, to: 52, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: b &>> n))
+        }
+        
+        for n in stride(from: 0, to: 48, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: c &>> n))
+        }
+        output.append(UInt8(truncatingIfNeeded: (c &>> 48) | (d &<< 4)))
+        
+        for n in stride(from: 4, to: 52, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: d &>> n))
+        }
+        
+        for n in stride(from: 0, to: 48, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: e &>> n))
+        }
     }
     
     public func encoded() -> [UInt8] {
-        var data = [UInt8]()
-        self.encode(to: &data)
-        return data
+        var output = [UInt8]()
+        output.reserveCapacity(32)
+        self.encode(to: &output)
+        return output
     }
     
-    public static func + (lhs: Scalar, rhs: Scalar) -> Scalar {
+    public static func + (lhs: Self, rhs: Self) -> Self {
         var carry: UInt64
         carry = lhs.a &+ rhs.a
-        let a = carry & mask
+        let a = carry & mask52
         carry = lhs.b &+ rhs.b &+ (carry &>> 52)
-        let b = carry & mask
+        let b = carry & mask52
         carry = lhs.c &+ rhs.c &+ (carry &>> 52)
-        let c = carry & mask
+        let c = carry & mask52
         carry = lhs.d &+ rhs.d &+ (carry &>> 52)
-        let d = carry & mask
+        let d = carry & mask52
         carry = lhs.e &+ rhs.e &+ (carry &>> 52)
-        let e = carry & mask
+        let e = carry & mask52
         
-        return Scalar(a, b, c, d, e) - order
+        return Self(a, b, c, d, e) - order
     }
     
-    public static func - (lhs: Scalar, rhs: Scalar) -> Scalar {
+    public static func - (lhs: Self, rhs: Self) -> Self {
         var borrow: UInt64
         borrow = lhs.a &- rhs.a
-        var a = borrow & mask
+        var a = borrow & mask52
         borrow = lhs.b &- rhs.b &- (borrow &>> 63)
-        var b = borrow & mask
+        var b = borrow & mask52
         borrow = lhs.c &- rhs.c &- (borrow &>> 63)
-        var c = borrow & mask
+        var c = borrow & mask52
         borrow = lhs.d &- rhs.d &- (borrow &>> 63)
-        var d = borrow & mask
+        var d = borrow & mask52
         borrow = lhs.e &- rhs.e &- (borrow &>> 63)
-        var e = borrow & mask
+        var e = borrow & mask52
         
         let underflowMask = ((borrow &>> 63) ^ 1) &- 1
         
         var carry: UInt64
         carry = a &+ (order.a & underflowMask)
-        a = carry & mask
+        a = carry & mask52
         carry = b &+ (order.b & underflowMask) &+ (carry &>> 52)
-        b = carry & mask
+        b = carry & mask52
         carry = c &+ (order.c & underflowMask) &+ (carry &>> 52)
-        c = carry & mask
+        c = carry & mask52
         carry = d &+ (order.d & underflowMask) &+ (carry &>> 52)
-        d = carry & mask
+        d = carry & mask52
         carry = e &+ (order.e & underflowMask) &+ (carry &>> 52)
-        e = carry & mask
+        e = carry & mask52
         
-        return Scalar(a, b, c, d, e)
+        return Self(a, b, c, d, e)
     }
     
-    public static func * (lhs: Scalar, rhs: Scalar) -> Scalar {
-        reduce(multiply(reduce(multiply(lhs, rhs)), montgomeryRadixSquared))
+    public static func * (lhs: Self, rhs: Self) -> Self {
+        lhs.montgomeryMultiplied(with: rhs).montgomeryMultiplied(with: montgomeryRadixSquared)
     }
     
-    private static func multiply(_ lhs: Scalar, _ rhs: Scalar) -> [UInt128] {
-        [
-            lhs.a <*> rhs.a,
-            lhs.a <*> rhs.b &+ lhs.b <*> rhs.a,
-            lhs.a <*> rhs.c &+ lhs.b <*> rhs.b &+ lhs.c <*> rhs.a,
-            lhs.a <*> rhs.d &+ lhs.b <*> rhs.c &+ lhs.c <*> rhs.b &+ lhs.d <*> rhs.a,
-            lhs.a <*> rhs.e &+ lhs.b <*> rhs.d &+ lhs.c <*> rhs.c &+ lhs.d <*> rhs.b &+ lhs.e <*> rhs.a,
-                               lhs.b <*> rhs.e &+ lhs.c <*> rhs.d &+ lhs.d <*> rhs.c &+ lhs.e <*> rhs.b,
-                                                  lhs.c <*> rhs.e &+ lhs.d <*> rhs.d &+ lhs.e <*> rhs.c,
-                                                                     lhs.d <*> rhs.e &+ lhs.e <*> rhs.d,
-                                                                                        lhs.e <*> rhs.e
-        ]
-    }
-    
-    private static func reduce(_ limbs: [UInt128]) -> Scalar {
+    private func montgomeryMultiplied(with other: Self) -> Self {
+        let w0 = a <*> other.a
+        let w1 = a <*> other.b &+ b <*> other.a
+        let w2 = a <*> other.c &+ b <*> other.b &+ c <*> other.a
+        let w3 = a <*> other.d &+ b <*> other.c &+ c <*> other.b &+ d <*> other.a
+        let w4 = a <*> other.e &+ b <*> other.d &+ c <*> other.c &+ d <*> other.b &+ e <*> other.a
+        let w5 =                  b <*> other.e &+ c <*> other.d &+ d <*> other.c &+ e <*> other.b
+        let w6 =                                   c <*> other.e &+ d <*> other.d &+ e <*> other.c
+        let w7 =                                                    d <*> other.e &+ e <*> other.d
+        let w8 =                                                                     e <*> other.e
+        
         @inline(__always)
         func one(_ sum: UInt128) -> (UInt128, UInt64) {
-            let p = (sum.low &* 0x51da312547e1b) & mask
+            let p = (sum.low &* 0x51da312547e1b) & mask52
             return ((sum &+ p <*> order.a) &>> 52, p)
         }
         
         @inline(__always)
         func two(_ sum: UInt128) -> (UInt128, UInt64) {
-            let w = sum.low & mask
-            return (sum &>> 52, w)
+            (sum &>> 52, sum.low & mask52)
         }
         
         var carry: UInt128
         let n0, n1, n2, n3, n4: UInt64
         
-        (carry, n0) = one(         limbs[0])
-        (carry, n1) = one(carry &+ limbs[1] &+ n0 <*> order.b)
-        (carry, n2) = one(carry &+ limbs[2] &+ n0 <*> order.c &+ n1 <*> order.b)
-        (carry, n3) = one(carry &+ limbs[3]                   &+ n1 <*> order.c &+ n2 <*> order.b)
-        (carry, n4) = one(carry &+ limbs[4] &+ n0 <*> order.e                   &+ n2 <*> order.c &+ n3 <*> order.b)
+        (carry, n0) = one(         w0)
+        (carry, n1) = one(carry &+ w1 &+ n0 <*> order.b)
+        (carry, n2) = one(carry &+ w2 &+ n0 <*> order.c &+ n1 <*> order.b)
+        (carry, n3) = one(carry &+ w3                   &+ n1 <*> order.c &+ n2 <*> order.b)
+        (carry, n4) = one(carry &+ w4 &+ n0 <*> order.e                   &+ n2 <*> order.c &+ n3 <*> order.b)
         
         let r0, r1, r2, r3, r4: UInt64
         
-        (carry, r0) = two(carry &+ limbs[5] &+ n1 <*> order.e                   &+ n3 <*> order.c &+ n4 <*> order.b)
-        (carry, r1) = two(carry &+ limbs[6]                   &+ n2 <*> order.e                   &+ n4 <*> order.c)
-        (carry, r2) = two(carry &+ limbs[7]                                     &+ n3 <*> order.e                  )
-        (carry, r3) = two(carry &+ limbs[8]                                                       &+ n4 <*> order.e)
+        (carry, r0) = two(carry &+ w5 &+ n1 <*> order.e                   &+ n3 <*> order.c &+ n4 <*> order.b)
+        (carry, r1) = two(carry &+ w6                   &+ n2 <*> order.e                   &+ n4 <*> order.c)
+        (carry, r2) = two(carry &+ w7                                     &+ n3 <*> order.e                  )
+        (carry, r3) = two(carry &+ w8                                                       &+ n4 <*> order.e)
                 r4  = carry.low
         
-        return Scalar(r0, r1, r2, r3, r4) - order
-    }
-    
-    func radix16() -> [Int8] {
-        var output = [Int8](repeating: 0, count: 64)
-        
-        for (i, byte) in self.encoded().enumerated() {
-            output[2 &* i     ] = Int8(byte & 15)
-            output[2 &* i &+ 1] = Int8((byte &>> 4) & 15)
-        }
-        
-        for i in 0..<63 {
-            let carry = (output[i] &+ 8) &>> 4
-            output[i     ] = output[i     ] &- (carry &<< 4)
-            output[i &+ 1] = output[i &+ 1] &+ carry
-        }
-        
-        return output
+        return Self(r0, r1, r2, r3, r4) - order
     }
 }
 
-fileprivate extension Array where Element == UInt64 {
+extension UInt64 {
+    init<D>(fromLittleEndianBytes input: D) where D: DataProtocol {
+        assert(input.count == MemoryLayout<Self>.size)
+        self = input.reduce(0) { ($0 &<< 8) | Self($1) }.byteSwapped
+    }
+}
+
+fileprivate extension SIMD4 where Scalar == UInt64 {
+    init<D>(fromLittleEndianBytes input: D) where D: DataProtocol {
+        let scalarSize = MemoryLayout<Scalar>.size
+        assert(input.count == Self.scalarCount * scalarSize)
+        
+        var input = input[...]
+        let x = Scalar(fromLittleEndianBytes: input.prefix(scalarSize))
+        input = input.dropFirst(scalarSize)
+        let y = Scalar(fromLittleEndianBytes: input.prefix(scalarSize))
+        input = input.dropFirst(scalarSize)
+        let z = Scalar(fromLittleEndianBytes: input.prefix(scalarSize))
+        input = input.dropFirst(scalarSize)
+        let w = Scalar(fromLittleEndianBytes: input.prefix(scalarSize))
+        
+        self = Self(x, y, z, w)
+    }
+    
     func isMinimal() -> Bool {
-        let order: [UInt64] = [
+        let order = Self(
             0x5812631a5cf5d3ed,
             0x14def9dea2f79cd6,
             0x0000000000000000,
             0x1000000000000000
-        ]
+        )
         
-        for (i, w) in self.enumerated().reversed() {
-            if w < order[i] {
+        for i in indices.reversed() {
+            switch self[i] {
+            case 0..<order[i]:
                 return true
-            } else if w > order[i] {
+            case order[i]:
+                continue
+            default:
                 return false
             }
         }
         
         return false
+    }
+}
+
+typealias SignedRadix16 = SIMD64<Int8>
+
+extension SignedRadix16 {
+    init(from scalar: Ristretto255.Scalar) {
+        self.init()
+                
+        for (i, byte) in zip(stride(from: 0, to: 64, by: 2), scalar.encoded()) {
+            self[i + 0] = Int8(byte & 0xf)
+            self[i + 1] = Int8((byte &>> 4) & 0xf)
+        }
+        
+        for i in 0..<63 {
+            let carry = (self[i] &+ 8) &>> 4
+            self[i + 0] &-= carry &<< 4
+            self[i + 1] &+= carry
+        }
     }
 }

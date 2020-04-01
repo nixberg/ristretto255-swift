@@ -1,11 +1,11 @@
 struct CTBool: Equatable {
-    static let `true`  = CTBool(UInt8(0x01))
-    static let `false` = CTBool(UInt8(0x00))
+    static let `true`  = Self(0x01 as UInt8)
+    static let `false` = Self(0x00 as UInt8)
     
     let rawValue: UInt8
     
-    init(_ value: CTBool) {
-        self = value
+    init(_ source: Self) {
+        self = source
     }
     
     init(_ rawValue: UInt8) {
@@ -14,50 +14,57 @@ struct CTBool: Equatable {
     }
     
     init(_ rawValue: Int8) {
+        let rawValue = UInt8(bitPattern: rawValue)
         assert(rawValue & 0x01 == rawValue)
-        self.rawValue = UInt8(rawValue)
+        self.rawValue = rawValue
     }
     
-    prefix static func ! (a: CTBool) -> CTBool {
-        CTBool(a.rawValue ^ 0x01)
+    fileprivate init(_ rawValue: UInt64) {
+        assert(rawValue & 0x01 == rawValue)
+        self.rawValue = UInt8(truncatingIfNeeded: rawValue)
     }
-        
-    static func == (lhs: CTBool, rhs: CTBool) -> Bool {
+    
+    prefix static func ! (operand: Self) -> Self {
+        Self(operand.rawValue ^ 0x01)
+    }
+    
+    static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.rawValue == rhs.rawValue
     }
     
-    static func && (lhs: CTBool, rhs: CTBool) -> CTBool {
-        CTBool(lhs.rawValue & rhs.rawValue)
+    static func && (lhs: Self, rhs: Self) -> Self {
+        Self(lhs.rawValue & rhs.rawValue)
     }
     
-    static func || (lhs: CTBool, rhs: CTBool) -> CTBool {
-        CTBool(lhs.rawValue | rhs.rawValue)
+    static func || (lhs: Self, rhs: Self) -> Self {
+        Self(lhs.rawValue | rhs.rawValue)
     }
 }
 
 extension Bool {
-    init(_ value: CTBool) {
-        self = (value == .true)
+    init(_ source: CTBool) {
+        self = (source == .true)
     }
 }
 
 extension UInt8 {
-    static func == (lhs: UInt8, rhs: UInt8) -> CTBool {
-        CTBool([4, 2, 1].reduce(~(lhs ^ rhs), { x, n in
+    static func == (lhs: Self, rhs: Self) -> CTBool {
+        CTBool([4, 2, 1].reduce(~(lhs ^ rhs)) { x, n in
             x & (x &>> n)
-        }))
+        })
     }
 }
 
 extension Int8 {
-    static func == (lhs: Int8, rhs: Int8) -> CTBool {
+    static func == (lhs: Self, rhs: Self) -> CTBool {
         UInt8(bitPattern: lhs) == UInt8(bitPattern: rhs)
     }
 }
 
-extension Array where Element == UInt8 {
-    static func == (lhs: [UInt8], rhs: [UInt8]) -> CTBool {
-        precondition(lhs.count == rhs.count)
-        return zip(lhs, rhs).map(==).reduce(CTBool.true, &&)
+extension UInt64 {
+    static func == (lhs: Self, rhs: Self) -> CTBool {
+        CTBool([32, 16, 8, 4, 2, 1].reduce(~(lhs ^ rhs)) { x, n in
+            x & (x &>> n)
+        })
     }
 }

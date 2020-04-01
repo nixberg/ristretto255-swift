@@ -1,6 +1,6 @@
 import Foundation
 
-fileprivate let mask: UInt64 = (1 << 51) - 1
+fileprivate let mask51: UInt64 = (1 << 51) - 1
 
 let squareRootMinusOne = FieldElement(
     0x00061b274a0ea0b0,
@@ -17,11 +17,13 @@ struct FieldElement {
     fileprivate let d: UInt64
     fileprivate let e: UInt64
     
-    static let zero = FieldElement(0)
+    static let zero = Self(0, 0, 0, 0, 0)
     
-    static let one = FieldElement(1)
+    static let one = Self(1, 0, 0, 0, 0)
     
-    init(_ a: UInt64, _ b: UInt64 = 0, _ c: UInt64 = 0, _ d: UInt64 = 0, _ e: UInt64 = 0) {
+    static let two = Self(2, 0, 0, 0, 0)
+    
+    init(_ a: UInt64, _ b: UInt64, _ c: UInt64, _ d: UInt64, _ e: UInt64) {
         self.a = a
         self.b = b
         self.c = c
@@ -29,80 +31,94 @@ struct FieldElement {
         self.e = e
     }
     
-    init<D>(from data: D) where D: DataProtocol {
-        assert(data.count == 32)
-        a = (UInt64(fromBytes: data.suffix(32 -  0)) &>>  0) & mask
-        b = (UInt64(fromBytes: data.suffix(32 -  6)) &>>  3) & mask
-        c = (UInt64(fromBytes: data.suffix(32 - 12)) &>>  6) & mask
-        d = (UInt64(fromBytes: data.suffix(32 - 19)) &>>  1) & mask
-        e = (UInt64(fromBytes: data.suffix(32 - 24)) &>> 12) & mask
+    private init<D>(unchecked input: D) where D: DataProtocol {
+        precondition(input.count == 32)
+        
+        var input = input[...]
+        let a = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  0) & mask51
+        input = input.dropFirst(6)
+        let b = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  3) & mask51
+        input = input.dropFirst(6)
+        let c = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  6) & mask51
+        input = input.dropFirst(7)
+        let d = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  1) & mask51
+        input = input.dropFirst(5)
+        let e = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>> 12) & mask51
+        
+        self.init(a, b, c, d, e)
     }
     
-    private func encodedFromReduced() -> [UInt8] {
-        [
-            a &>>  0,
-            a &>>  8,
-            a &>> 16,
-            a &>> 24,
-            a &>> 32,
-            a &>> 40,
-            a &>> 48 | b &<< 3,
-            
-            b &>>  5,
-            b &>> 13,
-            b &>> 21,
-            b &>> 29,
-            b &>> 37,
-            b &>> 45 | c &<< 6,
-            
-            c &>>  2,
-            c &>> 10,
-            c &>> 18,
-            c &>> 26,
-            c &>> 34,
-            c &>> 42,
-            c &>> 50 | d &<< 1,
-            
-            d &>>  7,
-            d &>> 15,
-            d &>> 23,
-            d &>> 31,
-            d &>> 39,
-            d &>> 47 | e &<< 4,
-            
-            e &>>  4,
-            e &>> 12,
-            e &>> 20,
-            e &>> 28,
-            e &>> 36,
-            e &>> 44
-        ].map {
-            UInt8(truncatingIfNeeded: $0)
+    init?<D>(from input: D) where D: DataProtocol {
+        self.init(unchecked: input)
+        guard zip(self.encoded(), input).map(^).reduce(0, |) == 0 else {
+            return nil
+        }
+    }
+    
+    init<D>(canonicalizing input: D) where D: DataProtocol {
+        self = Self(unchecked: input).canonicalized()
+    }
+    
+    public func encode<M>(to output: inout M) where M: MutableDataProtocol {
+        let canonical = self.canonicalized()
+        
+        for n in stride(from: 0, to: 48, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: canonical.a &>> n))
+        }
+        output.append(UInt8(truncatingIfNeeded: canonical.a &>> 48 | canonical.b &<< 3))
+        
+        for n in stride(from: 5, to: 45, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: canonical.b &>> n))
+        }
+        output.append(UInt8(truncatingIfNeeded: canonical.b &>> 45 | canonical.c &<< 6))
+        
+        for n in stride(from: 2, to: 50, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: canonical.c &>> n))
+        }
+        output.append(UInt8(truncatingIfNeeded: canonical.c &>> 50 | canonical.d &<< 1))
+        
+        for n in stride(from: 7, to: 47, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: canonical.d &>> n))
+        }
+        output.append(UInt8(truncatingIfNeeded: canonical.d &>> 47 | canonical.e &<< 4))
+        
+        for n in stride(from: 4, to: 52, by: 8) {
+            output.append(UInt8(truncatingIfNeeded: canonical.e &>> n))
         }
     }
     
     public func encoded() -> [UInt8] {
-        self.reduced().encodedFromReduced()
-    }
-    
-    func isPositive() -> CTBool {
-        CTBool((self.encoded()[0] & 0x01) ^ 0x01)
+        var output = [UInt8]()
+        output.reserveCapacity(32)
+        self.encode(to: &output)
+        return output
     }
     
     func isNegative() -> CTBool {
-        !self.isPositive()
+        CTBool(UInt8(truncatingIfNeeded: self.canonicalized().a) & 0x01)
     }
     
     func isZero() -> CTBool {
-        self.encoded().reduce(0, |) == 0x00
+        let canonical = self.canonicalized()
+        return canonical.a == 0
+            && canonical.b == 0
+            && canonical.c == 0
+            && canonical.d == 0
+            && canonical.e == 0
     }
     
-    static func == (lhs: FieldElement, rhs: FieldElement) -> CTBool {
-        lhs.encoded() == rhs.encoded()
+    static func == (lhs: Self, rhs: Self) -> CTBool {
+        let lhs = lhs.canonicalized()
+        let rhs = rhs.canonicalized()
+        return lhs.a == rhs.a
+            && lhs.b == rhs.b
+            && lhs.c == rhs.c
+            && lhs.d == rhs.d
+            && lhs.e == rhs.e
     }
     
-    static func + (lhs: FieldElement, rhs: FieldElement) -> FieldElement {
-        FieldElement(
+    static func + (lhs: Self, rhs: Self) -> Self {
+        Self(
             lhs.a &+ rhs.a,
             lhs.b &+ rhs.b,
             lhs.c &+ rhs.c,
@@ -111,27 +127,31 @@ struct FieldElement {
         )
     }
     
-    prefix static func - (x: FieldElement) -> FieldElement {
-        FieldElement(
-            0x007ffffffffffed0 &- x.a,
-            0x007ffffffffffff0 &- x.b,
-            0x007ffffffffffff0 &- x.c,
-            0x007ffffffffffff0 &- x.d,
-            0x007ffffffffffff0 &- x.e
-        ).weaklyReduced()
+    prefix static func - (operand: Self) -> Self {
+        Self(
+            0x007ffffffffffed0 &- operand.a,
+            0x007ffffffffffff0 &- operand.b,
+            0x007ffffffffffff0 &- operand.c,
+            0x007ffffffffffff0 &- operand.d,
+            0x007ffffffffffff0 &- operand.e
+        ).reduced()
     }
     
-    static func - (lhs: FieldElement, rhs: FieldElement) -> FieldElement {
-        FieldElement(
-            (lhs.a &+ 0x007ffffffffffed0) &- rhs.a,
-            (lhs.b &+ 0x007ffffffffffff0) &- rhs.b,
-            (lhs.c &+ 0x007ffffffffffff0) &- rhs.c,
-            (lhs.d &+ 0x007ffffffffffff0) &- rhs.d,
-            (lhs.e &+ 0x007ffffffffffff0) &- rhs.e
-        ).weaklyReduced()
+    mutating func negate(if condition: CTBool) {
+        self = self.or(-self, if: condition)
     }
     
-    static func * (lhs: FieldElement, rhs: FieldElement) -> FieldElement {
+    static func - (lhs: Self, rhs: Self) -> Self {
+        Self(
+            lhs.a &+ 0x007ffffffffffed0 &- rhs.a,
+            lhs.b &+ 0x007ffffffffffff0 &- rhs.b,
+            lhs.c &+ 0x007ffffffffffff0 &- rhs.c,
+            lhs.d &+ 0x007ffffffffffff0 &- rhs.d,
+            lhs.e &+ 0x007ffffffffffff0 &- rhs.e
+        ).reduced()
+    }
+    
+    static func * (lhs: Self, rhs: Self) -> Self {
         let x = lhs
         let y = rhs
         let m = (
@@ -142,29 +162,24 @@ struct FieldElement {
         )
         
         let c0 = x.a <*> y.a &+ x.e <*> m.b &+ x.d <*> m.c &+ x.c <*> m.d &+ x.b <*> m.e
-        var c1 = x.b <*> y.a &+ x.a <*> y.b &+ x.e <*> m.c &+ x.d <*> m.d &+ x.c <*> m.e
-        var c2 = x.c <*> y.a &+ x.b <*> y.b &+ x.a <*> y.c &+ x.e <*> m.d &+ x.d <*> m.e
-        var c3 = x.d <*> y.a &+ x.c <*> y.b &+ x.b <*> y.c &+ x.a <*> y.d &+ x.e <*> m.e
-        var c4 = x.e <*> y.a &+ x.d <*> y.b &+ x.c <*> y.c &+ x.b <*> y.d &+ x.a <*> y.e
+        let c1 = x.b <*> y.a &+ x.a <*> y.b &+ x.e <*> m.c &+ x.d <*> m.d &+ x.c <*> m.e &+> (c0 &>> 51).low
+        let c2 = x.c <*> y.a &+ x.b <*> y.b &+ x.a <*> y.c &+ x.e <*> m.d &+ x.d <*> m.e &+> (c1 &>> 51).low
+        let c3 = x.d <*> y.a &+ x.c <*> y.b &+ x.b <*> y.c &+ x.a <*> y.d &+ x.e <*> m.e &+> (c2 &>> 51).low
+        let c4 = x.e <*> y.a &+ x.d <*> y.b &+ x.c <*> y.c &+ x.b <*> y.d &+ x.a <*> y.e &+> (c3 &>> 51).low
         
-        c1 &+>= (c0 &>> 51).low
-        c2 &+>= (c1 &>> 51).low
-        c3 &+>= (c2 &>> 51).low
-        c4 &+>= (c3 &>> 51).low
+        let a = (c0.low & mask51) &+ 19 &* (c4 &>> 51).low
+        let b = (c1.low & mask51) &+ a &>> 51
         
-        let a = (c0.low & mask) &+ 19 &* (c4 &>> 51).low
-        let b = (c1.low & mask) &+ a &>> 51
-        
-        return FieldElement(
-            a & mask,
+        return Self(
+            a & mask51,
             b,
-            c2.low & mask,
-            c3.low & mask,
-            c4.low & mask
+            c2.low & mask51,
+            c3.low & mask51,
+            c4.low & mask51
         )
     }
     
-    func squared() -> FieldElement {
+    func squared() -> Self {
         let m = (
             d: 19 &* d,
             e: 19 &* e
@@ -176,152 +191,115 @@ struct FieldElement {
         let c3 = e <*> m.e &+ (a <*>   d &+ b <*>   c).doubled() &+> (c2 &>> 51).low
         let c4 = c <*>   c &+ (a <*>   e &+ b <*>   d).doubled() &+> (c3 &>> 51).low
         
-        let a = (c0.low & mask) &+ 19 &* (c4 &>> 51).low
-        let b = (c1.low & mask) &+ a &>> 51
+        let a = (c0.low & mask51) &+ 19 &* (c4 &>> 51).low
+        let b = (c1.low & mask51) &+ a &>> 51
         
-        return FieldElement(
-            a & mask,
+        return Self(
+            a & mask51,
             b,
-            c2.low & mask,
-            c3.low & mask,
-            c4.low & mask
+            c2.low & mask51,
+            c3.low & mask51,
+            c4.low & mask51
         )
     }
     
-    func squaredTimesTwo() -> FieldElement {
-        let squared = self.squared()
-        return FieldElement(
-            2 &* squared.a,
-            2 &* squared.b,
-            2 &* squared.c,
-            2 &* squared.d,
-            2 &* squared.e
+    private func squaredRepeatedly(count: Int) -> Self {
+        (0..<count).reduce(self) { x, _ in x.squared() }
+    }
+    
+    private func powTwo250MinusOne() -> (result: Self, powEleven: Self) {
+        let two = self.squared()
+        let nine = self * two.squared().squared()
+        let eleven = two * nine
+        let two5MinusOne = nine * eleven.squared() // 2^5 - 1
+        let two10MinusOne = two5MinusOne * two5MinusOne.squaredRepeatedly(count: 5)
+        let two20MinusOne = two10MinusOne * two10MinusOne.squaredRepeatedly(count: 10)
+        let two40MinusOne = two20MinusOne * two20MinusOne.squaredRepeatedly(count: 20)
+        let two50MinusOne = two10MinusOne * two40MinusOne.squaredRepeatedly(count: 10)
+        let two100MinusOne = two50MinusOne * two50MinusOne.squaredRepeatedly(count: 50)
+        let two200MinusOne = two100MinusOne * two100MinusOne.squaredRepeatedly(count: 100)
+        let two250MinusOne = two50MinusOne * two200MinusOne.squaredRepeatedly(count: 50)
+        return (two250MinusOne, eleven)
+    }
+    
+    func powTwo252MinusThree() -> Self {
+        self * self.powTwo250MinusOne().result.squaredRepeatedly(count: 2)
+    }
+    
+    func inverted() -> Self {
+        let (two250MinusOne, eleven) = self.powTwo250MinusOne()
+        return eleven * two250MinusOne.squaredRepeatedly(count: 5)
+    }
+    
+    func squareRoot(over denominator: Self) -> (result: Self, wasSquare: CTBool) {
+        let three = denominator * denominator.squared()
+        let seven = denominator * three.squared()
+        
+        var r = (self * three) * (self * seven).powTwo252MinusThree()
+        let check = denominator * r.squared()
+        
+        let selfNegated = -self
+        let isSignCorrect          = (check == self)
+        let isSignFlipped          = (check == selfNegated)
+        let isSignOfInverseFlipped = (check == selfNegated * squareRootMinusOne)
+        
+        r = r.or(r * squareRootMinusOne, if: isSignFlipped || isSignOfInverseFlipped)
+        
+        return (abs(r), isSignCorrect || isSignFlipped)
+    }
+    
+    func inverseSquareRoot() -> (result: Self, wasSquare: CTBool) {
+        Self.one.squareRoot(over: self)
+    }
+    
+    private func reduced() -> Self {
+        Self(
+            (a & mask51) &+ (e &>> 51) &* 19,
+            (b & mask51) &+ (a &>> 51),
+            (c & mask51) &+ (b &>> 51),
+            (d & mask51) &+ (c &>> 51),
+            (e & mask51) &+ (d &>> 51)
         )
     }
     
-    private func pow2(_ k: Int) -> FieldElement {
-        (0..<k).reduce(self, { (fe, _) in fe.squared() })
+    private var q: UInt64 {
+        [a, b, c, d, e].reduce(19) {
+            ($0 &+ $1) &>> 51
+        }
     }
     
-    private func pow2250MinusOne() -> (FieldElement, FieldElement) {
-        let t0  = self.squared()
-        let t1  = t0.squared().squared()
-        let t2  = self * t1
-        let t3  = t0 * t2
-        let t4  = t3.squared()
-        let t5  = t2 * t4
-        let t6  = t5.pow2(5)
-        let t7  = t6 * t5
-        let t8  = t7.pow2(10)
-        let t9  = t8 * t7
-        let t10 = t9.pow2(20)
-        let t11 = t10 * t9
-        let t12 = t11.pow2(10)
-        let t13 = t12 * t7
-        let t14 = t13.pow2(50)
-        let t15 = t14 * t13
-        let t16 = t15.pow2(100)
-        let t17 = t16 * t15
-        let t18 = t17.pow2(50)
-        let t19 = t18 * t13
+    func canonicalized() -> Self {
+        let reduced = self.reduced()
         
-        return (t19, t3)
-    }
-    
-    private func pow2250MinusOne() -> FieldElement {
-        let (result, _) = self.pow2250MinusOne()
-        return result
-    }
-    
-    func pow2252MinusThree() -> FieldElement {
-        self * self.pow2250MinusOne().pow2(2)
-    }
-    
-    func inverted() -> FieldElement {
-        let (t19, t3) = self.pow2250MinusOne()
-        let t20 = t19.pow2(5)
-        return t20 * t3
-    }
-    
-    func squareRoot(over v: FieldElement) -> (CTBool, FieldElement) {
-        let v3 = v.squared() * v
-        let v7 = v3.squared() * v
-        
-        var r = (self * v3) * (self * v7).pow2252MinusThree()
-        let check = v * r.squared()
-        
-        let minusSelf = -self
-        let isSignCorrect        = (check ==  self)
-        let isSignFlipped        = (check == minusSelf)
-        let isInverseSignFlipped = (check == minusSelf * squareRootMinusOne)
-        
-        let rPrime = squareRootMinusOne * r
-        r = (isSignFlipped || isInverseSignFlipped).then(rPrime, else: r)
-        
-        return (isSignCorrect || isSignFlipped, abs(r))
-    }
-    
-    func inverseSquareRoot() -> (CTBool, FieldElement) {
-        FieldElement.one.squareRoot(over: self)
-    }
-    
-    private func weaklyReduced() -> FieldElement {
-        FieldElement(
-            (a & mask) &+ (e &>> 51) &* 19,
-            (b & mask) &+ (a &>> 51),
-            (c & mask) &+ (b &>> 51),
-            (d & mask) &+ (c &>> 51),
-            (e & mask) &+ (d &>> 51)
-        )
-    }
-    
-    private func stronglyReduced() -> FieldElement {
-        let q = [a, b, c, d, e].reduce(19, { (q, limb) in
-            (q &+ limb) &>> 51
-        })
-        
-        let a = self.a &+ 19 &* q
-        let b = self.b &+ (a &>> 51)
-        let c = self.c &+ (b &>> 51)
-        let d = self.d &+ (c &>> 51)
-        let e = self.e &+ (d &>> 51)
+        let a = reduced.a &+ 19 &* reduced.q
+        let b = reduced.b &+ (a &>> 51)
+        let c = reduced.c &+ (b &>> 51)
+        let d = reduced.d &+ (c &>> 51)
+        let e = reduced.e &+ (d &>> 51)
         
         return FieldElement(
-            a & mask,
-            b & mask,
-            c & mask,
-            d & mask,
-            e & mask
+            a & mask51,
+            b & mask51,
+            c & mask51,
+            d & mask51,
+            e & mask51
         )
-    }
-    
-    @inline(__always)
-    private func reduced() -> FieldElement {
-        self.weaklyReduced().stronglyReduced()
     }
 }
 
 func abs(_ x: FieldElement) -> FieldElement {
-    x.isPositive().then(x, else: -x)
+    x.or(-x, if: x.isNegative())
 }
 
-fileprivate extension UInt64 {
-    init<D>(fromBytes data: D) where D: DataProtocol {
-        assert(data.count >= 8)
-        self = data.prefix(8).enumerated().map { UInt64($0.1) &<< ($0.0 &* 8) }.reduce(0, |)
-    }
-}
-
-extension CTBool {
-    func then(_ `true`: FieldElement, else `false`: FieldElement) -> FieldElement {
-        let mask = UInt64(rawValue) &- 1
-        let antimask = ~mask
-        return FieldElement(
-            (`true`.a & antimask) | (`false`.a & mask),
-            (`true`.b & antimask) | (`false`.b & mask),
-            (`true`.c & antimask) | (`false`.c & mask),
-            (`true`.d & antimask) | (`false`.d & mask),
-            (`true`.e & antimask) | (`false`.e & mask)
+extension FieldElement {
+    func or(_ other: Self, if condition: CTBool) -> Self {
+        let mask = UInt64(condition.rawValue) &- 1
+        return Self(
+            (a & mask) | (other.a & ~mask),
+            (b & mask) | (other.b & ~mask),
+            (c & mask) | (other.c & ~mask),
+            (d & mask) | (other.d & ~mask),
+            (e & mask) | (other.e & ~mask)
         )
     }
 }

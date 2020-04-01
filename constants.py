@@ -52,10 +52,10 @@ p = 2**255 - 19
 
 d = 37095705934669439343138083508754565189542113879843219016388785533085940283555
 print_field_element("d", d)
-print_field_element("dTimesTwo", (d * 2) % p)
+print_field_element("twoD", (d * 2) % p)
 
 print_field_element("minusOne", -1 % p)
-print_field_element("oneMinusDSquared", (1 - d)**2 % p)
+print_field_element("oneMinusDSquared", (1 - d**2) % p)
 print_field_element("dMinusOneSquared", (d - 1)**2 % p)
 
 print_field_element("squareRootMinusOne", 19681161376707505956807079304988542015446066515923890162744021073123829784752)
