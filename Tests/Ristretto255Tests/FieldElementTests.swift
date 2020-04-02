@@ -17,7 +17,8 @@ final class FieldElementTest: XCTestCase {
     ])!
     
     func testRoundtrip() {
-        let one = FieldElement(canonicalizing: [0xee] + [UInt8](repeating: 0xff, count: 30) + [0x7f])
+        let one = FieldElement(canonicalizing:
+            [0xee] + [UInt8](repeating: 0xff, count: 30) + [0x7f])
         let expected = [0x01] + [UInt8](repeating: 0x00, count: 31)
         XCTAssertEqual(one.encoded(), expected)
         XCTAssertEqual(FieldElement.one.encoded(), expected)
@@ -106,7 +107,7 @@ extension FieldElement: Equatable {
 extension FieldElement: ExpressibleByIntegerLiteral {
     public typealias IntegerLiteralType = UInt64
     
-    public init(integerLiteral value: UInt64) {
+    public init(integerLiteral value: IntegerLiteralType) {
         self = FieldElement(value, 0, 0, 0, 0)
     }
 }

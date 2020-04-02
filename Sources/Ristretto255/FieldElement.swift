@@ -31,7 +31,7 @@ struct FieldElement {
         self.e = e
     }
     
-    private init<D>(unchecked input: D) where D: DataProtocol {
+    private init<Input>(unchecked input: Input) where Input: DataProtocol {
         precondition(input.count == 32)
         
         var input = input[...]
@@ -48,18 +48,18 @@ struct FieldElement {
         self.init(a, b, c, d, e)
     }
     
-    init?<D>(from input: D) where D: DataProtocol {
+    init?<Input>(from input: Input) where Input: DataProtocol {
         self.init(unchecked: input)
         guard zip(self.encoded(), input).map(^).reduce(0, |) == 0 else {
             return nil
         }
     }
     
-    init<D>(canonicalizing input: D) where D: DataProtocol {
+    init<Input>(canonicalizing input: Input) where Input: DataProtocol {
         self = Self(unchecked: input).canonicalized()
     }
     
-    public func encode<M>(to output: inout M) where M: MutableDataProtocol {
+    public func encode<Output>(to output: inout Output) where Output: MutableDataProtocol {
         let canonical = self.canonicalized()
         
         for n in stride(from: 0, to: 48, by: 8) {

@@ -39,7 +39,7 @@ public struct Element: Equatable {
        t = source.x * source.y
     }
     
-    public init?<D>(from input: D) where D: DataProtocol {
+    public init?<Input>(from input: Input) where Input: DataProtocol {
         precondition(input.count == 32)
         
         guard let s = FieldElement(from: input) else {
@@ -72,7 +72,7 @@ public struct Element: Equatable {
         }
     }
     
-    public init<D>(fromUniformBytes input: D) where D: DataProtocol {
+    public init<Input>(fromUniformBytes input: Input) where Input: DataProtocol {
         precondition(input.count == 64)
         
         let r0 = FieldElement(canonicalizing: input.prefix(32))
@@ -143,7 +143,7 @@ public struct Element: Equatable {
         )
     }
     
-    public func encode<M>(to output: inout M) where M: MutableDataProtocol {
+    public func encode<Output>(to output: inout Output) where Output: MutableDataProtocol {
         let inverseSquareRootMinusOneMinusD = FieldElement(
             0x0000fdaa805d40ea,
             0x0002eb482e57d339,

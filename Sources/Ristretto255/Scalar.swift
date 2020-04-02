@@ -43,7 +43,7 @@ public struct Scalar {
         self.e = e
     }
     
-    public init?<D>(from input: D) where D: DataProtocol {
+    public init?<Input>(from input: Input) where Input: DataProtocol {
         precondition(input.count == 32)
         
         let scalar = SIMD4<UInt64>(fromLittleEndianBytes: input)
@@ -59,7 +59,7 @@ public struct Scalar {
         e = ((scalar[3] &>> 16)                     )
     }
     
-    public init<D>(fromUniformBytes input: D) where D: DataProtocol {
+    public init<Input>(fromUniformBytes input: Input) where Input: DataProtocol {
         precondition(input.count == 64)
         
         let x = SIMD4<UInt64>(fromLittleEndianBytes: input.prefix(32))
@@ -89,7 +89,7 @@ public struct Scalar {
         return Self(fromUniformBytes: (0..<64).map { _ in rng.next() })
     }
     
-    public func encode<M>(to output: inout M) where M: MutableDataProtocol {
+    public func encode<Output>(to output: inout Output) where Output: MutableDataProtocol {
         for n in stride(from: 0, to: 48, by: 8) {
             output.append(UInt8(truncatingIfNeeded: a &>> n))
         }
@@ -214,14 +214,14 @@ public struct Scalar {
 }
 
 extension UInt64 {
-    init<D>(fromLittleEndianBytes input: D) where D: DataProtocol {
+    init<Input>(fromLittleEndianBytes input: Input) where Input: DataProtocol {
         assert(input.count == MemoryLayout<Self>.size)
         self = input.reduce(0) { ($0 &<< 8) | Self($1) }.byteSwapped
     }
 }
 
-fileprivate extension SIMD4 where Scalar == UInt64 {
-    init<D>(fromLittleEndianBytes input: D) where D: DataProtocol {
+extension SIMD4 where Scalar == UInt64 {
+    fileprivate init<Input>(fromLittleEndianBytes input: Input) where Input: DataProtocol {
         let scalarSize = MemoryLayout<Scalar>.size
         assert(input.count == Self.scalarCount * scalarSize)
         
@@ -245,18 +245,15 @@ fileprivate extension SIMD4 where Scalar == UInt64 {
             0x1000000000000000
         )
         
+        var result: CTBool = .false
+        var wasSet: CTBool = .false
+        
         for i in indices.reversed() {
-            switch self[i] {
-            case 0..<order[i]:
-                return true
-            case order[i]:
-                continue
-            default:
-                return false
-            }
+            result = result.or(self[i] < order[i], if: !wasSet)
+            wasSet = wasSet || !(self[i] == order[i])
         }
         
-        return false
+        return Bool(result)
     }
 }
 
@@ -265,7 +262,7 @@ typealias SignedRadix16 = SIMD64<Int8>
 extension SignedRadix16 {
     init(from scalar: Ristretto255.Scalar) {
         self.init()
-                
+        
         for (i, byte) in zip(stride(from: 0, to: 64, by: 2), scalar.encoded()) {
             self[i + 0] = Int8(byte & 0xf)
             self[i + 1] = Int8((byte &>> 4) & 0xf)

@@ -26,18 +26,98 @@ final class ScalarTests: XCTestCase {
         0x00001fffffffffff
     )
     
-    func testRoundtrip() {
-        XCTAssertEqual(Scalar(from: a.encoded()), a)
+    func testValidEncodings() {
+        let vectors: [(input: [UInt8], expected: Scalar)] = [
+            (
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                .zero
+            ),
+            (
+                "0100000000000000000000000000000000000000000000000000000000000000",
+                Scalar(1, 0, 0, 0, 0)
+            ),
+            (
+                "89beb3076c23450c7ca6d2c31beee3aa82a74a4a4cec4f6e3f6b8cab9fda3205",
+                a
+            ),
+            (
+                "64154255ae3fcd4b5af624dfc20bfb697d58b5b5b313b091c09473546025cd0a",
+                b
+            ),
+            (
+                "ecd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010",
+                Scalar(0x2631a5cf5d3ec, 0xdea2f79cd6581, 0x14def9, 0, 0x100000000000)
+            )
+        ]
+        
+        for (input, expected) in vectors {
+            XCTAssertNotNil(Scalar(from: input))
+            XCTAssertEqual(Scalar(from: input), expected)
+            XCTAssertEqual(Scalar(from: input)?.encoded(), input)
+            XCTAssertEqual(expected.encoded(), input)
+        }
     }
     
-    func testRoundtripRandom() {
+    func testInvalidEncodings() {
+        let vectors: [[UInt8]] = [
+            "edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010",
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1f",
+        ]
+        
+        for vector in vectors {
+            XCTAssertNil(Scalar(from: vector))
+        }
+    }
+    
+    func testIsMinimal() {
+        let order = SIMD4<UInt64>(
+            0x5812631a5cf5d3ed,
+            0x14def9dea2f79cd6,
+            0x0000000000000000,
+            0x1000000000000000
+        )
+        
+        func expectedIsMinimal(for scalar: SIMD4<UInt64>) -> Bool {
+            for i in order.indices.reversed() {
+                switch scalar[i] {
+                case 0..<order[i]:
+                    return true
+                case order[i]:
+                    continue
+                default:
+                    return false
+                }
+            }
+            return false
+        }
+        
+        for x in (order.x - 1)...(order.x + 1) {
+            for y in (order.y - 1)...(order.y + 1) {
+                for z in order.z...(order.z + 1) {
+                    for w in (order.w - 1)...(order.w + 1) {
+                        let scalar = SIMD4(x, y, z, w)
+                        XCTAssertEqual(scalar.isMinimal(), expectedIsMinimal(for: scalar))
+                    }
+                }
+            }
+        }
+        
+        var rng = SystemRandomNumberGenerator()
+        
+        for _ in 0..<1024 {
+            let scalar = SIMD4(rng.next(), rng.next(), rng.next(), rng.next())
+            XCTAssertEqual(scalar.isMinimal(), expectedIsMinimal(for: scalar))
+        }
+    }
+    
+    func testRandomRoundtrip() {
         for _ in 0..<32 {
             let scalar = Scalar.random()
             XCTAssertEqual(Scalar(from: scalar.encoded()), scalar)
         }
     }
     
-    func testFromUniform() {
+    func testFromUniformBytes() {
         let encoded = [UInt8](repeating: 255, count: 64)
         let expected = Scalar(
             0x000611e3449c0f00,

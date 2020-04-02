@@ -8,18 +8,7 @@ struct CTBool: Equatable {
         self = source
     }
     
-    init(_ rawValue: UInt8) {
-        assert(rawValue & 0x01 == rawValue)
-        self.rawValue = rawValue
-    }
-    
-    init(_ rawValue: Int8) {
-        let rawValue = UInt8(bitPattern: rawValue)
-        assert(rawValue & 0x01 == rawValue)
-        self.rawValue = rawValue
-    }
-    
-    fileprivate init(_ rawValue: UInt64) {
+    init<T>(_ rawValue: T) where T: FixedWidthInteger & UnsignedInteger {
         assert(rawValue & 0x01 == rawValue)
         self.rawValue = UInt8(truncatingIfNeeded: rawValue)
     }
@@ -39,6 +28,10 @@ struct CTBool: Equatable {
     static func || (lhs: Self, rhs: Self) -> Self {
         Self(lhs.rawValue | rhs.rawValue)
     }
+    
+    func or(_ other: Self, if condition: Self) -> Self {
+        (self && !condition) || (other && condition)
+    }
 }
 
 extension Bool {
@@ -47,24 +40,21 @@ extension Bool {
     }
 }
 
-extension UInt8 {
+extension FixedWidthInteger where Self: UnsignedInteger {
     static func == (lhs: Self, rhs: Self) -> CTBool {
-        CTBool([4, 2, 1].reduce(~(lhs ^ rhs)) { x, n in
-            x & (x &>> n)
-        })
+        var result = lhs ^ rhs
+        result |= 0 &- result
+        result &>>= Self.bitWidth - 1
+        return !CTBool(result)
     }
-}
-
-extension Int8 {
-    static func == (lhs: Self, rhs: Self) -> CTBool {
-        UInt8(bitPattern: lhs) == UInt8(bitPattern: rhs)
-    }
-}
-
-extension UInt64 {
-    static func == (lhs: Self, rhs: Self) -> CTBool {
-        CTBool([32, 16, 8, 4, 2, 1].reduce(~(lhs ^ rhs)) { x, n in
-            x & (x &>> n)
-        })
+    
+    static func < (lhs: Self, rhs: Self) -> CTBool {
+        // From https://github.com/veorq/cryptocoding
+        var result = lhs &- rhs
+        result ^= rhs
+        result |= lhs ^ rhs
+        result ^= lhs
+        result &>>= Self.bitWidth - 1
+        return CTBool(result)
     }
 }

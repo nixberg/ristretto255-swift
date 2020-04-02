@@ -188,7 +188,7 @@ final class ElementTest: XCTestCase {
 extension Array: ExpressibleByStringLiteral where Element == UInt8 {
     public typealias StringLiteralType = String
     
-    public init(stringLiteral hex: Self.StringLiteralType) {
+    public init(stringLiteral hex: StringLiteralType) {
         var hex = hex.components(separatedBy: .whitespaces).joined()[...]
         precondition(hex.count.isMultiple(of: 2))
         self = stride(from: 0, to: hex.count, by: 2).map { _ in
