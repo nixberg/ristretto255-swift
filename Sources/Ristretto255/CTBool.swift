@@ -1,4 +1,4 @@
-struct CTBool: Equatable {
+struct CTBool {
     static let `true`  = Self(0x01 as UInt8)
     static let `false` = Self(0x00 as UInt8)
     
@@ -17,10 +17,6 @@ struct CTBool: Equatable {
         Self(operand.rawValue ^ 0x01)
     }
     
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.rawValue == rhs.rawValue
-    }
-    
     static func && (lhs: Self, rhs: Self) -> Self {
         Self(lhs.rawValue & rhs.rawValue)
     }
@@ -36,7 +32,7 @@ struct CTBool: Equatable {
 
 extension Bool {
     init(_ source: CTBool) {
-        self = (source == .true)
+        self = source.rawValue == CTBool.true.rawValue
     }
 }
 

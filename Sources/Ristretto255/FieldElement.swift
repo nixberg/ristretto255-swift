@@ -239,9 +239,9 @@ struct FieldElement {
         let check = denominator * r.squared()
         
         let selfNegated = -self
-        let isSignCorrect          = (check == self)
-        let isSignFlipped          = (check == selfNegated)
-        let isSignOfInverseFlipped = (check == selfNegated * squareRootMinusOne)
+        let isSignCorrect          = check == self
+        let isSignFlipped          = check == selfNegated
+        let isSignOfInverseFlipped = check == selfNegated * squareRootMinusOne
         
         r = r.or(r * squareRootMinusOne, if: isSignFlipped || isSignOfInverseFlipped)
         
