@@ -5,7 +5,7 @@ final class CTBoolTests: XCTestCase {
     func testEqualTo() {
         for lhs in UInt8.min...UInt8.max {
             for rhs in UInt8.min...UInt8.max {
-                XCTAssertEqual(Bool(CTBool(lhs == rhs)), lhs == rhs)
+                XCTAssertEqual(Bool((lhs == rhs) as CTBool), lhs == rhs)
             }
         }
     }
@@ -13,7 +13,7 @@ final class CTBoolTests: XCTestCase {
     func testLessThan() {
         for lhs in UInt8.min...UInt8.max {
             for rhs in UInt8.min...UInt8.max {
-                XCTAssertEqual(Bool(CTBool(lhs < rhs)), lhs < rhs)
+                XCTAssertEqual(Bool((lhs < rhs) as CTBool), lhs < rhs)
             }
         }
     }

@@ -4,10 +4,6 @@ struct CTBool {
     
     let rawValue: UInt8
     
-    init(_ source: Self) {
-        self = source
-    }
-    
     init<T>(_ rawValue: T) where T: FixedWidthInteger & UnsignedInteger {
         assert(rawValue & 0x01 == rawValue)
         self.rawValue = UInt8(truncatingIfNeeded: rawValue)
