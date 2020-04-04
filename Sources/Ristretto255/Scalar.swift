@@ -48,7 +48,14 @@ public struct Scalar {
         
         let scalar = SIMD4<UInt64>(fromLittleEndianBytes: input)
         
-        guard scalar.isMinimal() else {
+        let order = SIMD4<UInt64>(
+            0x5812631a5cf5d3ed,
+            0x14def9dea2f79cd6,
+            0x0000000000000000,
+            0x1000000000000000
+        )
+        
+        guard scalar < order else {
             return nil
         }
         
@@ -237,20 +244,13 @@ extension SIMD4 where Scalar == UInt64 {
         self = Self(x, y, z, w)
     }
     
-    func isMinimal() -> Bool {
-        let order = Self(
-            0x5812631a5cf5d3ed,
-            0x14def9dea2f79cd6,
-            0x0000000000000000,
-            0x1000000000000000
-        )
-        
+    static func < (lhs: Self, rhs: Self) -> Bool {
         var result: CTBool = .false
         var wasSet: CTBool = .false
         
-        for i in indices.reversed() {
-            result = result.or(self[i] < order[i], if: !wasSet)
-            wasSet = wasSet || !(self[i] == order[i])
+        for i in lhs.indices.reversed() {
+            result = result.or(lhs[i] < rhs[i], if: !wasSet)
+            wasSet = wasSet || !(lhs[i] == rhs[i])
         }
         
         return Bool(result)

@@ -67,11 +67,11 @@ struct ProjectiveNiels {
     
     static let zero = Self(.one, .one, .one, .zero)
     
-    init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ z: FieldElement, _ tTimes2D: FieldElement) {
+    init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ z: FieldElement, _ tTimesTwoD: FieldElement) {
         self.yPlusX = yPlusX
         self.yMinusX = yMinusX
         self.z = z
-        self.tTimesTwoD = tTimes2D
+        self.tTimesTwoD = tTimesTwoD
     }
     
     init(_ other: Element) {
@@ -128,10 +128,10 @@ struct AffineNiels {
     
     static let zero = Self(.one, .one, .zero)
     
-    init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ xyTimes2D: FieldElement) {
+    init(_ yPlusX: FieldElement, _ yMinusX: FieldElement, _ xyTimesTwoD: FieldElement) {
         self.yPlusX = yPlusX
         self.yMinusX = yMinusX
-        self.xyTimesTwoD = xyTimes2D
+        self.xyTimesTwoD = xyTimesTwoD
     }
     
     init(_ element: Element) {

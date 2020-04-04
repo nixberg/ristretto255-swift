@@ -51,7 +51,6 @@ final class ScalarTests: XCTestCase {
         ]
         
         for (input, expected) in vectors {
-            XCTAssertNotNil(Scalar(from: input))
             XCTAssertEqual(Scalar(from: input), expected)
             XCTAssertEqual(Scalar(from: input)?.encoded(), input)
             XCTAssertEqual(expected.encoded(), input)
@@ -69,7 +68,7 @@ final class ScalarTests: XCTestCase {
         }
     }
     
-    func testIsMinimal() {
+    func testLessThan() {
         let order = SIMD4<UInt64>(
             0x5812631a5cf5d3ed,
             0x14def9dea2f79cd6,
@@ -77,10 +76,10 @@ final class ScalarTests: XCTestCase {
             0x1000000000000000
         )
         
-        func expectedIsMinimal(for scalar: SIMD4<UInt64>) -> Bool {
+        func expected(_ scalar: SIMD4<UInt64>) -> Bool {
             for i in order.indices.reversed() {
                 switch scalar[i] {
-                case 0..<order[i]:
+                case ..<order[i]:
                     return true
                 case order[i]:
                     continue
@@ -96,7 +95,7 @@ final class ScalarTests: XCTestCase {
                 for z in order.z...(order.z + 1) {
                     for w in (order.w - 1)...(order.w + 1) {
                         let scalar = SIMD4(x, y, z, w)
-                        XCTAssertEqual(scalar.isMinimal(), expectedIsMinimal(for: scalar))
+                        XCTAssertEqual(scalar < order, expected(scalar))
                     }
                 }
             }
@@ -106,7 +105,7 @@ final class ScalarTests: XCTestCase {
         
         for _ in 0..<1024 {
             let scalar = SIMD4(rng.next(), rng.next(), rng.next(), rng.next())
-            XCTAssertEqual(scalar.isMinimal(), expectedIsMinimal(for: scalar))
+            XCTAssertEqual(scalar < order, expected(scalar))
         }
     }
     
