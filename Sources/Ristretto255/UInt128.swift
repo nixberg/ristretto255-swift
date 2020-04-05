@@ -25,7 +25,7 @@ struct UInt128 {
     
     @inline(__always)
     static func &>> (lhs: Self, rhs: Int) -> Self {
-        return Self(lhs.high &>> rhs, (lhs.high &<< (64 - rhs)) | (lhs.low &>> rhs))
+        Self(lhs.high &>> rhs, (lhs.high &<< (64 - rhs)) | (lhs.low &>> rhs))
     }
     
     @inline(__always)

@@ -72,9 +72,7 @@ fileprivate extension AffineNiels {
 
 fileprivate extension CTBool {
     init(_ rawValue: Int8) {
-        let rawValue = UInt8(bitPattern: rawValue)
-        assert(rawValue & 0x01 == rawValue)
-        self.rawValue = rawValue
+        self.init(UInt8(bitPattern: rawValue))
     }
 }
 

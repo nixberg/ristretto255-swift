@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+def print_hex(name, number):
+    print(f"let {name} = \"{number.to_bytes(32, 'little').hex()}\"\n")
+
 def print_scalar(name, scalar):
     mask = 2**52 - 1
     print(f"""let {name} = Scalar(
@@ -69,7 +72,7 @@ x = 1447401115466452442794637312608598848165874808320507050493219800098914120499
 y = 6145104759870991071742105800796537629880401874866217824609283457819451087098
 
 print_scalar("x", x)
-print("xBytes", x.to_bytes(32, "little").hex())
+print_hex("xBytes", x)
 print_scalar("y", y)
 print_scalar("x*y", (x * y) % order)
 
@@ -77,9 +80,9 @@ a = 2351415481556538453565687241199399922945659411799870114962672658845158063753
 b = 4885590095775723760407499321843594317911456947580037491039278279440296187236
 
 print_scalar("a", a)
-print("aBytes", a.to_bytes(32, "little").hex())
+print_hex("aBytes", a)
 print_scalar("b", b)
-print("bBytes", b.to_bytes(32, "little").hex())
+print_hex("bBytes", b)
 print_scalar("a+b", (a + b) % order)
 print_scalar("a-b", (a - b) % order)
 
