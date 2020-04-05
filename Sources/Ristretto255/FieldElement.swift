@@ -23,6 +23,15 @@ struct FieldElement {
     
     static let two = Self(2, 0, 0, 0, 0)
     
+    func assertBounds() {
+        let upperBound = 1 << 52
+        assert(a < upperBound)
+        assert(b < upperBound)
+        assert(c < upperBound)
+        assert(d < upperBound)
+        assert(e < upperBound)
+    }
+    
     init(_ a: UInt64, _ b: UInt64, _ c: UInt64, _ d: UInt64, _ e: UInt64) {
         self.a = a
         self.b = b
@@ -85,6 +94,8 @@ struct FieldElement {
         for n in stride(from: 4, to: 52, by: 8) {
             output.append(UInt8(truncatingIfNeeded: canonical.e &>> n))
         }
+        
+        assert(canonical.e &>> 51 == 0)
     }
     
     public func encoded() -> [UInt8] {
@@ -124,34 +135,31 @@ struct FieldElement {
             lhs.c &+ rhs.c,
             lhs.d &+ rhs.d,
             lhs.e &+ rhs.e
-        )
+        ).reduced()
+    }
+    
+    static func - (lhs: Self, rhs: Self) -> Self {
+        Self(
+            (lhs.a &+ 0x007ffffffffffed0) &- rhs.a,
+            (lhs.b &+ 0x007ffffffffffff0) &- rhs.b,
+            (lhs.c &+ 0x007ffffffffffff0) &- rhs.c,
+            (lhs.d &+ 0x007ffffffffffff0) &- rhs.d,
+            (lhs.e &+ 0x007ffffffffffff0) &- rhs.e
+        ).reduced()
     }
     
     prefix static func - (operand: Self) -> Self {
-        Self(
-            0x007ffffffffffed0 &- operand.a,
-            0x007ffffffffffff0 &- operand.b,
-            0x007ffffffffffff0 &- operand.c,
-            0x007ffffffffffff0 &- operand.d,
-            0x007ffffffffffff0 &- operand.e
-        ).reduced()
+        .zero - operand
     }
     
     mutating func negate(if condition: CTBool) {
         self = self.or(-self, if: condition)
     }
     
-    static func - (lhs: Self, rhs: Self) -> Self {
-        Self(
-            lhs.a &+ 0x007ffffffffffed0 &- rhs.a,
-            lhs.b &+ 0x007ffffffffffff0 &- rhs.b,
-            lhs.c &+ 0x007ffffffffffff0 &- rhs.c,
-            lhs.d &+ 0x007ffffffffffff0 &- rhs.d,
-            lhs.e &+ 0x007ffffffffffff0 &- rhs.e
-        ).reduced()
-    }
-    
     static func * (lhs: Self, rhs: Self) -> Self {
+        lhs.assertBounds()
+        rhs.assertBounds()
+        
         let x = lhs
         let y = rhs
         let m = (
@@ -180,6 +188,8 @@ struct FieldElement {
     }
     
     func squared() -> Self {
+        self.assertBounds()
+        
         let m = (
             d: 19 &* d,
             e: 19 &* e
