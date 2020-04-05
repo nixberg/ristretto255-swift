@@ -5,15 +5,6 @@ struct UInt128 {
     let high: UInt64
     let low: UInt64
     
-    init() {
-        high = 0
-        low = 0
-    }
-    
-    init(_ source: Self) {
-        self = source
-    }
-    
     fileprivate init(_ high: UInt64, _ low: UInt64) {
         self.high = high
         self.low = low
