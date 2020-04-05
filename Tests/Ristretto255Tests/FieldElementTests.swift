@@ -148,36 +148,45 @@ final class FieldElementTest: XCTestCase {
     }
     
     func testSquareRootOver() {
-        var (squareRoot, wasSquare) = 0.squareRoot(over: 0)
-        XCTAssertTrue(Bool(wasSquare))
-        XCTAssertEqual(squareRoot, 0)
-        XCTAssertFalse(Bool(squareRoot.isNegative))
+        let vectors: [(u: FieldElement, v: FieldElement, expected: FieldElement, wasSquare: CTBool)] = [
+            (0, 0, 0, .true),
+            (0, 1, 0, .true),
+            (1, 0, 0, .false),
+            (2, 1, FieldElement(
+                0x0001e4d8b5f15f3c,
+                0x00072a5a0370e762,
+                0x000010a16342f39f,
+                0x00007a6a597fb361,
+                0x000547cdb7fb03e2
+            ), .false),
+            (4, 1, 2, .true),
+            (1, 4, FieldElement(
+                0x0007fffffffffff6,
+                0x0007ffffffffffff,
+                0x0007ffffffffffff,
+                0x0007ffffffffffff,
+                0x0003ffffffffffff
+            ), .true),
+        ]
         
-        (squareRoot, wasSquare) = 1.squareRoot(over: 0)
-        XCTAssertFalse(Bool(wasSquare))
-        XCTAssertEqual(squareRoot, 0)
-        XCTAssertFalse(Bool(squareRoot.isNegative))
-        
-        (squareRoot, wasSquare) = 2.squareRoot(over: 1)
-        XCTAssertFalse(Bool(wasSquare))
-        XCTAssertEqual(squareRoot.squared(), 2 * squareRootMinusOne)
-        XCTAssertFalse(Bool(squareRoot.isNegative))
-        
-        (squareRoot, wasSquare) = 4.squareRoot(over: 1)
-        XCTAssertTrue(Bool(wasSquare))
-        XCTAssertEqual(squareRoot.squared(), 4)
-        XCTAssertFalse(Bool(squareRoot.isNegative))
-        
-        (squareRoot, wasSquare) = 1.squareRoot(over: 4)
-        XCTAssertTrue(Bool(wasSquare))
-        XCTAssertEqual(4 * squareRoot.squared(), 1)
-        XCTAssertFalse(Bool(squareRoot.isNegative))
+        for vector in vectors {
+            let (result, wasSquare) = vector.u.squareRoot(over: vector.v)
+            XCTAssertEqual(result, vector.expected)
+            XCTAssertEqual(wasSquare, vector.wasSquare)
+            XCTAssertFalse(Bool(result.isNegative))
+        }
     }
 }
 
 extension FieldElement: Equatable {
-    public static func == (lhs: FieldElement, rhs: FieldElement) -> Bool {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         Bool((lhs == rhs) as CTBool)
+    }
+}
+
+extension CTBool: Equatable {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue == rhs.rawValue
     }
 }
 

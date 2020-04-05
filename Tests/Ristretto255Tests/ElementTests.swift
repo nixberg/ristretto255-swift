@@ -3,21 +3,21 @@ import XCTest
 
 final class ElementTest: XCTestCase {
     func testZeroRoundtrip() {
-        let bytes: [UInt8] = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000"
-        let zero = Element(from: bytes)
+        let encoding: [UInt8] = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000"
+        let zero = Element(from: encoding)
         XCTAssertNotNil(zero)
         XCTAssertEqual(zero, Element.zero)
-        XCTAssertEqual(zero?.encoded(), bytes)
-        XCTAssertEqual(Element.zero.encoded(), bytes)
+        XCTAssertEqual(zero?.encoded(), encoding)
+        XCTAssertEqual(Element.zero.encoded(), encoding)
     }
     
     func testGeneratorRoundtrip() {
-        let bytes: [UInt8] = "e2f2ae0a 6abc4e71 a884a961 c500515f 58e30b6a a582dd8d b6a65945 e08d2d76"
-        let generator = Element(from: bytes)
+        let encoding: [UInt8] = "e2f2ae0a 6abc4e71 a884a961 c500515f 58e30b6a a582dd8d b6a65945 e08d2d76"
+        let generator = Element(from: encoding)
         XCTAssertNotNil(generator)
         XCTAssertEqual(generator, Element.generator)
-        XCTAssertEqual(generator?.encoded(), bytes)
-        XCTAssertEqual(Element.generator.encoded(), bytes)
+        XCTAssertEqual(generator?.encoded(), encoding)
+        XCTAssertEqual(Element.generator.encoded(), encoding)
     }
     
     func testRandomRoundtrip() {
@@ -141,6 +141,24 @@ final class ElementTest: XCTestCase {
         
         for (input, expected) in vectors {
             XCTAssertEqual(Element(fromUniformBytes: input).encoded(), expected)
+        }
+    }
+    
+    func testFromUniformBytesEquivalence() {
+        let vectors: [[UInt8]] = [
+            "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" +
+                "1200000000000000000000000000000000000000000000000000000000000000",
+            "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f" +
+                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "0000000000000000000000000000000000000000000000000000000000000080" +
+                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+            "0000000000000000000000000000000000000000000000000000000000000000" +
+                "1200000000000000000000000000000000000000000000000000000000000080",
+        ]
+        let expected: [UInt8] = "304282791023b73128d277bdcb5c7746ef2eac08dde9f2983379cb8e5ef0517f"
+        
+        for vector in vectors {
+            XCTAssertEqual(Element(fromUniformBytes: vector).encoded(), expected)
         }
     }
     
