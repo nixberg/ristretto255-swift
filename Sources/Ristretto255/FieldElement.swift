@@ -21,8 +21,6 @@ struct FieldElement {
     
     static let one = Self(1, 0, 0, 0, 0)
     
-    static let two = Self(2, 0, 0, 0, 0)
-    
     func assertBounds() {
         let upperBound = 1 << 52
         assert(a < upperBound)

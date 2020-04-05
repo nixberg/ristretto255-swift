@@ -62,7 +62,7 @@ public struct Element: Equatable {
         let denX = inverseSquareRoot * u2
         let denY = inverseSquareRoot * denX * v
         
-        x = abs(.two * s * denX)
+        x = abs((s + s) * denX)
         y = u1 * denY
         z = .one
         t = x * y
@@ -130,7 +130,7 @@ public struct Element: Equatable {
         
         let sSquared = s.squared()
         
-        let w0 = .two * s * v
+        let w0 = (s + s) * v
         let w1 = n * squareRootATimesDMinusOne
         let w2 = .one - sSquared
         let w3 = .one + sSquared

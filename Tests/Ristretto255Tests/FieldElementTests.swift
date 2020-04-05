@@ -16,6 +16,7 @@ final class FieldElementTest: XCTestCase {
         0x0007b12faf5be38a,
         0x000207fc6cc34079
     )
+    let two = FieldElement(2, 0, 0, 0, 0)
     
     func testValidEncodings() {
         let vectors: [(input: [UInt8], expected: FieldElement)] = [
@@ -29,7 +30,7 @@ final class FieldElementTest: XCTestCase {
             ),
             (
                 "0200000000000000000000000000000000000000000000000000000000000000",
-                .two
+                two
             ),
             (
                 "04fedf98a7fa0a688492bd590807a7039ed1f6f2e1d9e2a4a4514736f3c3a917",
@@ -43,7 +44,6 @@ final class FieldElementTest: XCTestCase {
                 "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
                 .zero - .one
             )
-            
         ]
         
         for (input, expected) in vectors {
@@ -69,7 +69,7 @@ final class FieldElementTest: XCTestCase {
     func testIsNegative() {
         XCTAssertFalse(Bool(FieldElement.zero.isNegative()))
         XCTAssertTrue(Bool(FieldElement.one.isNegative()))
-        XCTAssertFalse(Bool(FieldElement.two.isNegative()))
+        XCTAssertFalse(Bool(two.isNegative()))
         XCTAssertFalse(Bool(a.isNegative()))
         XCTAssertTrue(Bool((-a).isNegative()))
     }
@@ -121,7 +121,7 @@ final class FieldElementTest: XCTestCase {
         XCTAssertEqual(b * a, expected)
         XCTAssertEqual(a * .zero, .zero)
         XCTAssertEqual(a * .one, a)
-        XCTAssertEqual(a * .two, a + a)
+        XCTAssertEqual(a * two, a + a)
     }
     
     func testSquaring() {
@@ -131,7 +131,7 @@ final class FieldElementTest: XCTestCase {
         XCTAssertEqual(a.squared(), a * a)
         XCTAssertEqual(FieldElement.zero.squared(), .zero)
         XCTAssertEqual(FieldElement.one.squared(), .one)
-        XCTAssertEqual(FieldElement.two.squared(), .two + .two)
+        XCTAssertEqual(two.squared(), two + two)
     }
     
     func testPowTwo252MinusThree() {
@@ -190,7 +190,7 @@ extension FieldElement: ExpressibleByIntegerLiteral {
 }
 
 fileprivate extension Int {
-    func squareRoot(over v: FieldElement) -> (result: FieldElement, wasSquare: CTBool) {
-        FieldElement(UInt64(self), 0, 0, 0, 0).squareRoot(over: v)
+    func squareRoot(over denominator: FieldElement) -> (result: FieldElement, wasSquare: CTBool) {
+        FieldElement(UInt64(self), 0, 0, 0, 0).squareRoot(over: denominator)
     }
 }
