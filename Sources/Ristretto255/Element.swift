@@ -46,7 +46,7 @@ public struct Element: Equatable {
             return nil
         }
         
-        if Bool(s.isNegative()) {
+        if Bool(s.isNegative) {
             return nil
         }
         
@@ -67,7 +67,7 @@ public struct Element: Equatable {
         z = .one
         t = x * y
         
-        if Bool(!wasSquare || t.isNegative() || y.isZero()) {
+        if Bool(!wasSquare || t.isNegative || y.isZero) {
             return nil
         }
     }
@@ -161,12 +161,12 @@ public struct Element: Equatable {
         let den2 = u2 * inverseSquareRoot
         let zInverted = den1 * den2 * t
         
-        let mustRotate = (t * zInverted).isNegative()
+        let mustRotate = (t * zInverted).isNegative
         let x = self.x.or(self.y * squareRootMinusOne, if: mustRotate)
         var y = self.y.or(self.x * squareRootMinusOne, if: mustRotate)
         let denInverted = den2.or(den1 * inverseSquareRootMinusOneMinusD, if: mustRotate)
         
-        y.negate(if: (x * zInverted).isNegative())
+        y.negate(if: (x * zInverted).isNegative)
         
         abs(denInverted * (z - y)).encode(to: &output)
     }

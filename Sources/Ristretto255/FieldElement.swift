@@ -103,11 +103,11 @@ struct FieldElement {
         return output
     }
     
-    func isNegative() -> CTBool {
+    var isNegative: CTBool {
         CTBool(UInt8(truncatingIfNeeded: self.canonicalized().a) & 0x01)
     }
     
-    func isZero() -> CTBool {
+    var isZero: CTBool {
         let canonical = self.canonicalized()
         return canonical.a == 0
             && canonical.b == 0
@@ -296,7 +296,7 @@ struct FieldElement {
 }
 
 func abs(_ x: FieldElement) -> FieldElement {
-    x.or(-x, if: x.isNegative())
+    x.or(-x, if: x.isNegative)
 }
 
 extension FieldElement {

@@ -67,17 +67,17 @@ final class FieldElementTest: XCTestCase {
     }
     
     func testIsNegative() {
-        XCTAssertFalse(Bool(FieldElement.zero.isNegative()))
-        XCTAssertTrue(Bool(FieldElement.one.isNegative()))
-        XCTAssertFalse(Bool(two.isNegative()))
-        XCTAssertFalse(Bool(a.isNegative()))
-        XCTAssertTrue(Bool((-a).isNegative()))
+        XCTAssertFalse(Bool(FieldElement.zero.isNegative))
+        XCTAssertTrue(Bool(FieldElement.one.isNegative))
+        XCTAssertFalse(Bool(two.isNegative))
+        XCTAssertFalse(Bool(a.isNegative))
+        XCTAssertTrue(Bool((-a).isNegative))
     }
     
     func testIsZero() {
-        XCTAssertTrue(Bool(FieldElement.zero.isZero()))
-        XCTAssertFalse(Bool(FieldElement.one.isZero()))
-        XCTAssertFalse(Bool(a.isZero()))
+        XCTAssertTrue(Bool(FieldElement.zero.isZero))
+        XCTAssertFalse(Bool(FieldElement.one.isZero))
+        XCTAssertFalse(Bool(a.isZero))
     }
     
     func testEqualTo() {
@@ -151,27 +151,27 @@ final class FieldElementTest: XCTestCase {
         var (squareRoot, wasSquare) = 0.squareRoot(over: 0)
         XCTAssertTrue(Bool(wasSquare))
         XCTAssertEqual(squareRoot, 0)
-        XCTAssertFalse(Bool(squareRoot.isNegative()))
+        XCTAssertFalse(Bool(squareRoot.isNegative))
         
         (squareRoot, wasSquare) = 1.squareRoot(over: 0)
         XCTAssertFalse(Bool(wasSquare))
         XCTAssertEqual(squareRoot, 0)
-        XCTAssertFalse(Bool(squareRoot.isNegative()))
+        XCTAssertFalse(Bool(squareRoot.isNegative))
         
         (squareRoot, wasSquare) = 2.squareRoot(over: 1)
         XCTAssertFalse(Bool(wasSquare))
         XCTAssertEqual(squareRoot.squared(), 2 * squareRootMinusOne)
-        XCTAssertFalse(Bool(squareRoot.isNegative()))
+        XCTAssertFalse(Bool(squareRoot.isNegative))
         
         (squareRoot, wasSquare) = 4.squareRoot(over: 1)
         XCTAssertTrue(Bool(wasSquare))
         XCTAssertEqual(squareRoot.squared(), 4)
-        XCTAssertFalse(Bool(squareRoot.isNegative()))
+        XCTAssertFalse(Bool(squareRoot.isNegative))
         
         (squareRoot, wasSquare) = 1.squareRoot(over: 4)
         XCTAssertTrue(Bool(wasSquare))
         XCTAssertEqual(4 * squareRoot.squared(), 1)
-        XCTAssertFalse(Bool(squareRoot.isNegative()))
+        XCTAssertFalse(Bool(squareRoot.isNegative))
     }
 }
 
