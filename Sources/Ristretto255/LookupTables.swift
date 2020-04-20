@@ -1,3 +1,5 @@
+import CTBool
+
 struct LookupTable {
     private let table: [ProjectiveNiels]
     

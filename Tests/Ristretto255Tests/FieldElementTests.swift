@@ -1,4 +1,5 @@
 import XCTest
+import CTBool
 @testable import Ristretto255
 
 final class FieldElementTest: XCTestCase {

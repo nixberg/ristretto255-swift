@@ -1,4 +1,5 @@
 import Foundation
+import CTBool
 
 fileprivate let d = FieldElement(
     0x00034dca135978a3,

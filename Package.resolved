@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "CTBool",
+        "repositoryURL": "https://github.com/nixberg/ctbool-swift",
+        "state": {
+          "branch": null,
+          "revision": "859ef2582a674691367936d129ffa4ee35d0d18d",
+          "version": "0.1.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

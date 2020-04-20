@@ -1,4 +1,5 @@
 import Foundation
+import CTBool
 
 fileprivate let mask51: UInt64 = (1 << 51) - 1
 
