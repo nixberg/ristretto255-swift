@@ -149,7 +149,7 @@ final class FieldElementTest: XCTestCase {
     }
     
     func testSquareRootOver() {
-        let vektors: [(u: [UInt8], v: [UInt8], wasSquare: CTBool, r: [UInt8])] = [
+        let vectors: [(u: [UInt8], v: [UInt8], wasSquare: CTBool, r: [UInt8])] = [
             (
                 u: "0000000000000000000000000000000000000000000000000000000000000000",
                 v: "0000000000000000000000000000000000000000000000000000000000000000",
@@ -182,7 +182,7 @@ final class FieldElementTest: XCTestCase {
             )
         ]
         
-        for vector in vektors {
+        for vector in vectors {
             let u = FieldElement(from: vector.u)!
             let v = FieldElement(from: vector.v)!
             let expected = FieldElement(from: vector.r)!
