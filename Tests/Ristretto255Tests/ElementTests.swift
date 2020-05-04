@@ -103,38 +103,38 @@ final class ElementTest: XCTestCase {
     func testFromUniformBytes() {
         let vectors: [(input: [UInt8], expected: [UInt8])] = [
             (
-                "5d1be09e3d0c82fc538112490e35701979d99e06ca3e2b5b54bffe8b4dc772c1"
-                    + "4d98b696a1bbfb5ca32c436cc61c16563790306c79eaca7705668b47dffe5bb6",
+                "5d1be09e3d0c82fc538112490e35701979d99e06ca3e2b5b54bffe8b4dc772c1" +
+                "4d98b696a1bbfb5ca32c436cc61c16563790306c79eaca7705668b47dffe5bb6",
                 "3066f82a 1a747d45 120d1740 f1435853 1a8f04bb ffe6a819 f86dfe50 f44a0a46"
             ),
             (
-                "f116b34b8f17ceb56e8732a60d913dd10cce47a6d53bee9204be8b44f6678b27"
-                    + "0102a56902e2488c46120e9276cfe54638286b9e4b3cdb470b542d46c2068d38",
+                "f116b34b8f17ceb56e8732a60d913dd10cce47a6d53bee9204be8b44f6678b27" +
+                "0102a56902e2488c46120e9276cfe54638286b9e4b3cdb470b542d46c2068d38",
                 "f26e5b6f 7d362d2d 2a94c5d0 e7602cb4 773c95a2 e5c31a64 f133189f a76ed61b"
             ),
             (
-                "8422e1bbdaab52938b81fd602effb6f89110e1e57208ad12d9ad767e2e25510c"
-                    + "27140775f9337088b982d83d7fcf0b2fa1edffe51952cbe7365e95c86eaf325c",
+                "8422e1bbdaab52938b81fd602effb6f89110e1e57208ad12d9ad767e2e25510c" +
+                "27140775f9337088b982d83d7fcf0b2fa1edffe51952cbe7365e95c86eaf325c",
                 "006ccd2a 9e6867e6 a2c5cea8 3d3302cc 9de128dd 2a9a57dd 8ee7b9d7 ffe02826"
             ),
             (
-                "ac22415129b61427bf464e17baee8db65940c233b98afce8d17c57beeb7876c2"
-                    + "150d15af1cb1fb824bbd14955f2b57d08d388aab431a391cfc33d5bafb5dbbaf",
+                "ac22415129b61427bf464e17baee8db65940c233b98afce8d17c57beeb7876c2" +
+                "150d15af1cb1fb824bbd14955f2b57d08d388aab431a391cfc33d5bafb5dbbaf",
                 "f8f0c87c f237953c 5890aec3 99816900 5dae3eca 1fbb0454 8c635953 c817f92a"
             ),
             (
-                "165d697a1ef3d5cf3c38565beefcf88c0f282b8e7dbd28544c483432f1cec767"
-                    + "5debea8ebb4e5fe7d6f6e5db15f15587ac4d4d4a1de7191e0c1ca6664abcc413",
+                "165d697a1ef3d5cf3c38565beefcf88c0f282b8e7dbd28544c483432f1cec767" +
+                "5debea8ebb4e5fe7d6f6e5db15f15587ac4d4d4a1de7191e0c1ca6664abcc413",
                 "ae81e7de df20a497 e10c304a 765c1767 a42d6e06 029758d2 d7e8ef7c c4c41179"
             ),
             (
-                "a836e6c9a9ca9f1e8d486273ad56a78c70cf18f0ce10abb1c7172ddd605d7fd2"
-                    + "979854f47ae1ccf204a33102095b4200e5befc0465accc263175485f0e17ea5c",
+                "a836e6c9a9ca9f1e8d486273ad56a78c70cf18f0ce10abb1c7172ddd605d7fd2" +
+                "979854f47ae1ccf204a33102095b4200e5befc0465accc263175485f0e17ea5c",
                 "e2705652 ff9f5e44 d3e841bf 1c251cf7 dddb77d1 40870d1a b2ed64f1 a9ce8628"
             ),
             (
-                "2cdc11eaeb95daf01189417cdddbf95952993aa9cb9c640eb5058d09702c7462"
-                    + "2c9965a697a3b345ec24ee56335b556e677b30e6f90ac77d781064f866a3c982",
+                "2cdc11eaeb95daf01189417cdddbf95952993aa9cb9c640eb5058d09702c7462" +
+                "2c9965a697a3b345ec24ee56335b556e677b30e6f90ac77d781064f866a3c982",
                 "80bd0726 2511cdde 4863f8a7 434cef69 6750681c b9510eea 557088f7 6d9e5065"
             )
         ]
@@ -147,15 +147,15 @@ final class ElementTest: XCTestCase {
     func testFromUniformBytesEquivalence() {
         let vectors: [[UInt8]] = [
             "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" +
-                "1200000000000000000000000000000000000000000000000000000000000000",
+            "1200000000000000000000000000000000000000000000000000000000000000",
             "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f" +
-                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
             "0000000000000000000000000000000000000000000000000000000000000080" +
-                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
             "0000000000000000000000000000000000000000000000000000000000000000" +
-                "1200000000000000000000000000000000000000000000000000000000000080",
+            "1200000000000000000000000000000000000000000000000000000000000080",
         ]
-        let expected: [UInt8] = "304282791023b73128d277bdcb5c7746ef2eac08dde9f2983379cb8e5ef0517f"
+        let expected: [UInt8] = "30428279 1023b731 28d277bd cb5c7746 ef2eac08 dde9f298 3379cb8e 5ef0517f"
         
         for vector in vectors {
             XCTAssertEqual(Element(fromUniformBytes: vector).encoded(), expected)

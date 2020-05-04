@@ -149,30 +149,46 @@ final class FieldElementTest: XCTestCase {
     }
     
     func testSquareRootOver() {
-        let vectors: [(u: FieldElement, v: FieldElement, expected: FieldElement, wasSquare: CTBool)] = [
-            (0, 0, 0, .true),
-            (0, 1, 0, .true),
-            (1, 0, 0, .false),
-            (2, 1, FieldElement(
-                0x0001e4d8b5f15f3c,
-                0x00072a5a0370e762,
-                0x000010a16342f39f,
-                0x00007a6a597fb361,
-                0x000547cdb7fb03e2
-            ), .false),
-            (4, 1, 2, .true),
-            (1, 4, FieldElement(
-                0x0007fffffffffff6,
-                0x0007ffffffffffff,
-                0x0007ffffffffffff,
-                0x0007ffffffffffff,
-                0x0003ffffffffffff
-            ), .true),
+        let vektors: [(u: [UInt8], v: [UInt8], wasSquare: CTBool, r: [UInt8])] = [
+            (
+                u: "0000000000000000000000000000000000000000000000000000000000000000",
+                v: "0000000000000000000000000000000000000000000000000000000000000000",
+                wasSquare: .true,
+                r: "0000000000000000000000000000000000000000000000000000000000000000"
+            ),
+            (
+                u: "0100000000000000000000000000000000000000000000000000000000000000",
+                v: "0000000000000000000000000000000000000000000000000000000000000000",
+                wasSquare: .false,
+                r: "0000000000000000000000000000000000000000000000000000000000000000"
+            ),
+            (
+                u: "0200000000000000000000000000000000000000000000000000000000000000",
+                v: "0100000000000000000000000000000000000000000000000000000000000000",
+                wasSquare: .false,
+                r: "3c5ff1b5d8e4113b871bd052f9e7bcd0582804c266ffb2d4f4203eb07fdb7c54"
+            ),
+            (
+                u: "0400000000000000000000000000000000000000000000000000000000000000",
+                v: "0100000000000000000000000000000000000000000000000000000000000000",
+                wasSquare: .true,
+                r: "0200000000000000000000000000000000000000000000000000000000000000"
+            ),
+            (
+                u: "0100000000000000000000000000000000000000000000000000000000000000",
+                v: "0400000000000000000000000000000000000000000000000000000000000000",
+                wasSquare: .true,
+                r: "f6ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3f"
+            )
         ]
         
-        for vector in vectors {
-            let (result, wasSquare) = vector.u.squareRoot(over: vector.v)
-            XCTAssertEqual(result, vector.expected)
+        for vector in vektors {
+            let u = FieldElement(from: vector.u)!
+            let v = FieldElement(from: vector.v)!
+            let expected = FieldElement(from: vector.r)!
+            
+            let (result, wasSquare) = u.squareRoot(over: v)
+            XCTAssertEqual(result, expected)
             XCTAssertEqual(wasSquare, vector.wasSquare)
             XCTAssertFalse(Bool(result.isNegative))
         }
@@ -188,19 +204,5 @@ extension FieldElement: Equatable {
 extension CTBool: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.rawValue == rhs.rawValue
-    }
-}
-
-extension FieldElement: ExpressibleByIntegerLiteral {
-    public typealias IntegerLiteralType = UInt64
-    
-    public init(integerLiteral value: IntegerLiteralType) {
-        self = FieldElement(value, 0, 0, 0, 0)
-    }
-}
-
-fileprivate extension Int {
-    func squareRoot(over denominator: FieldElement) -> (result: FieldElement, wasSquare: CTBool) {
-        FieldElement(UInt64(self), 0, 0, 0, 0).squareRoot(over: denominator)
     }
 }
