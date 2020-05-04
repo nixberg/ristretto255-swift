@@ -2,7 +2,7 @@
 
 Swift implementation of [ristretto255](https://ristretto.group)
 ([Internet-Draft](https://tools.ietf.org/html/draft-hdevalence-cfrg-ristretto-01)).
-Mostly a port of [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek). Do not use.
+Mostly a port of [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek). Experimental, do not use.
 
 ## Usage
 ### Key exchange
