@@ -1,3 +1,5 @@
+![Swift](https://github.com/nixberg/ristretto255-swift/workflows/Swift/badge.svg?branch=master)
+
 # Ristretto255
 
 Swift implementation of [ristretto255](https://ristretto.group)
