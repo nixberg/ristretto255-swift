@@ -1,4 +1,4 @@
-import CTBool
+import ConstantTime
 
 struct LookupTable {
     private let table: [ProjectiveNiels]
@@ -10,15 +10,15 @@ struct LookupTable {
     }
     
     subscript(index: Int8) -> ProjectiveNiels {
-        let mask = index &>> 7
+        let mask = index >> 7
         let absoluteIndex = ((index &+ mask) ^ mask)
         
         var result = ProjectiveNiels.zero
         for (i, element) in table.enumerated() {
-            result = result.or(element, if: absoluteIndex == Int8(i + 1))
+            result.replace(with: element, if: absoluteIndex == Int8(i + 1))
         }
         
-        return result.or(-result, if: CTBool(mask & 0x01))
+        return result.negated(if: Choice(unsafeRawValue: UInt8(truncatingIfNeeded: mask) & 0x01))
     }
 }
 
@@ -39,47 +39,63 @@ struct GeneratorLookupTable {
     }
     
     subscript(rowIndex: Int, index: Int8) -> AffineNiels {
-        let mask = index &>> 7
+        let mask = index >> 7
         let absoluteIndex = ((index &+ mask) ^ mask)
         
         var result = AffineNiels.zero
         for (i, element) in table[rowIndex].enumerated() {
-            result = result.or(element, if: absoluteIndex == Int8(i + 1))
+            result.replace(with: element, if: absoluteIndex == Int8(i + 1))
         }
         
-        return result.or(-result, if: CTBool(mask & 0x01))
+        return result.negated(if: Choice(unsafeRawValue: UInt8(truncatingIfNeeded: mask) & 0x01))
      }
 }
 
 fileprivate extension ProjectiveNiels {
-    func or(_ other: Self, if condition: CTBool) -> Self {
+    private func replaced(with other: Self, if choice: Choice) -> Self {
         Self(
-            yPlusX.or(other.yPlusX, if: condition),
-            yMinusX.or(other.yMinusX, if: condition),
-            z.or(other.z, if: condition),
-            tTimesTwoD.or(other.tTimesTwoD, if: condition)
+            yPlusX.replaced(with: other.yPlusX, if: choice),
+            yMinusX.replaced(with: other.yMinusX, if: choice),
+            z.replaced(with: other.z, if: choice),
+            tTimesTwoD.replaced(with: other.tTimesTwoD, if: choice)
         )
+    }
+    
+    mutating func replace(with other: Self, if choice: Choice) {
+        self = self.replaced(with: other, if: choice)
+    }
+    
+    func negated(if choice: Choice) -> Self {
+        self.replaced(with: -self, if: choice)
     }
 }
 
 fileprivate extension AffineNiels {
-    func or(_ other: Self, if condition: CTBool) -> Self {
+    private func replaced(with other: Self, if choice: Choice) -> Self {
         Self(
-            yPlusX.or(other.yPlusX, if: condition),
-            yMinusX.or(other.yMinusX, if: condition),
-            xyTimesTwoD.or(other.xyTimesTwoD, if: condition)
+            yPlusX.replaced(with: other.yPlusX, if: choice),
+            yMinusX.replaced(with: other.yMinusX, if: choice),
+            xyTimesTwoD.replaced(with: other.xyTimesTwoD, if: choice)
         )
+    }
+    
+    mutating func replace(with other: Self, if choice: Choice) {
+        self = self.replaced(with: other, if: choice)
+    }
+    
+    func negated(if choice: Choice) -> Self {
+        self.replaced(with: -self, if: choice)
     }
 }
 
-fileprivate extension CTBool {
+fileprivate extension Choice {
     init(_ rawValue: Int8) {
-        self.init(UInt8(bitPattern: rawValue))
+        self = Choice(unsafeRawValue: UInt8(bitPattern: rawValue))
     }
 }
 
 fileprivate extension Int8 {
-    static func == (lhs: Self, rhs: Self) -> CTBool {
+    static func == (lhs: Self, rhs: Self) -> Choice {
         UInt8(bitPattern: lhs) == UInt8(bitPattern: rhs)
     }
 }

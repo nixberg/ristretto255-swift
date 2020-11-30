@@ -1,5 +1,5 @@
+import ConstantTime
 import Foundation
-import CTBool
 
 fileprivate let d = FieldElement(
     0x00034dca135978a3,
@@ -124,8 +124,8 @@ public struct Element: Equatable {
         
         var (s, wasSquare) = u.squareRoot(over: v)
         let sPrime = -abs(s * t)
-        s = s.or(sPrime, if: !wasSquare)
-        c = c.or(r, if: !wasSquare)
+        s = s.replaced(with: sPrime, if: !wasSquare)
+        c = c.replaced(with: r, if: !wasSquare)
         
         let n = c * (r - .one) * dMinusOneSquared - v
         
@@ -163,9 +163,10 @@ public struct Element: Equatable {
         let zInverted = den1 * den2 * t
         
         let mustRotate = (t * zInverted).isNegative
-        let x = self.x.or(self.y * squareRootMinusOne, if: mustRotate)
-        var y = self.y.or(self.x * squareRootMinusOne, if: mustRotate)
-        let denInverted = den2.or(den1 * inverseSquareRootMinusOneMinusD, if: mustRotate)
+        let x = self.x.replaced(with: self.y * squareRootMinusOne, if: mustRotate)
+        var y = self.y.replaced(with: self.x * squareRootMinusOne, if: mustRotate)
+        let denInverted = den2.replaced(
+            with: den1 * inverseSquareRootMinusOneMinusD, if: mustRotate)
         
         y.negate(if: (x * zInverted).isNegative)
         

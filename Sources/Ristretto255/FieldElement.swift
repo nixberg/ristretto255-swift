@@ -1,5 +1,5 @@
+import ConstantTime
 import Foundation
-import CTBool
 
 fileprivate let mask51: UInt64 = (1 << 51) - 1
 
@@ -104,11 +104,11 @@ struct FieldElement {
         return output
     }
     
-    var isNegative: CTBool {
-        CTBool(UInt8(truncatingIfNeeded: self.canonicalized().a) & 0x01)
+    var isNegative: Choice {
+        Choice(unsafeRawValue: UInt8(truncatingIfNeeded: self.canonicalized().a) & 0x01)
     }
     
-    var isZero: CTBool {
+    var isZero: Choice {
         let canonical = self.canonicalized()
         return canonical.a == 0
             && canonical.b == 0
@@ -117,7 +117,7 @@ struct FieldElement {
             && canonical.e == 0
     }
     
-    static func == (lhs: Self, rhs: Self) -> CTBool {
+    static func == (lhs: Self, rhs: Self) -> Choice {
         let lhs = lhs.canonicalized()
         let rhs = rhs.canonicalized()
         return lhs.a == rhs.a
@@ -151,8 +151,8 @@ struct FieldElement {
         .zero - operand
     }
     
-    mutating func negate(if condition: CTBool) {
-        self = self.or(-self, if: condition)
+    mutating func negate(if choice: Choice) {
+        self = self.replaced(with: -self, if: choice)
     }
     
     static func * (lhs: Self, rhs: Self) -> Self {
@@ -240,7 +240,7 @@ struct FieldElement {
         return eleven * two250MinusOne.squaredRepeatedly(count: 5)
     }
     
-    func squareRoot(over denominator: Self) -> (result: Self, wasSquare: CTBool) {
+    func squareRoot(over denominator: Self) -> (result: Self, wasSquare: Choice) {
         let three = denominator * denominator.squared()
         let seven = denominator * three.squared()
         
@@ -252,12 +252,12 @@ struct FieldElement {
         let isSignFlipped          = check == selfNegated
         let isSignOfInverseFlipped = check == selfNegated * squareRootMinusOne
         
-        r = r.or(r * squareRootMinusOne, if: isSignFlipped || isSignOfInverseFlipped)
+        r = r.replaced(with: r * squareRootMinusOne, if: isSignFlipped || isSignOfInverseFlipped)
         
         return (abs(r), isSignCorrect || isSignFlipped)
     }
     
-    func inverseSquareRoot() -> (result: Self, wasSquare: CTBool) {
+    func inverseSquareRoot() -> (result: Self, wasSquare: Choice) {
         Self.one.squareRoot(over: self)
     }
     
@@ -297,18 +297,18 @@ struct FieldElement {
 }
 
 func abs(_ x: FieldElement) -> FieldElement {
-    x.or(-x, if: x.isNegative)
+    x.replaced(with: -x, if: x.isNegative)
 }
 
 extension FieldElement {
-    func or(_ other: Self, if condition: CTBool) -> Self {
-        let mask = UInt64(condition.rawValue) &- 1
-        return Self(
-            (a & mask) | (other.a & ~mask),
-            (b & mask) | (other.b & ~mask),
-            (c & mask) | (other.c & ~mask),
-            (d & mask) | (other.d & ~mask),
-            (e & mask) | (other.e & ~mask)
+    func replaced(with other: Self, if choice: Choice) -> Self {
+        let mask = UInt64(maskFrom: choice)
+        return FieldElement(
+            (a & ~mask) | (other.a & mask),
+            (b & ~mask) | (other.b & mask),
+            (c & ~mask) | (other.c & mask),
+            (d & ~mask) | (other.d & mask),
+            (e & ~mask) | (other.e & mask)
         )
     }
 }

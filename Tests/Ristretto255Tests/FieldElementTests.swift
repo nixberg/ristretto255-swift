@@ -1,5 +1,5 @@
+import ConstantTime
 import XCTest
-import CTBool
 @testable import Ristretto255
 
 final class FieldElementTest: XCTestCase {
@@ -82,8 +82,8 @@ final class FieldElementTest: XCTestCase {
     }
     
     func testEqualTo() {
-        XCTAssertTrue(Bool((a == a) as CTBool))
-        XCTAssertFalse(Bool((a == b) as CTBool))
+        XCTAssertTrue(Bool(Choice(a == a)))
+        XCTAssertFalse(Bool(Choice(a == b)))
     }
     
     func testAddition() {
@@ -149,7 +149,7 @@ final class FieldElementTest: XCTestCase {
     }
     
     func testSquareRootOver() {
-        let vectors: [(u: [UInt8], v: [UInt8], wasSquare: CTBool, r: [UInt8])] = [
+        let vectors: [(u: [UInt8], v: [UInt8], wasSquare: Choice, r: [UInt8])] = [
             (
                 u: "0000000000000000000000000000000000000000000000000000000000000000",
                 v: "0000000000000000000000000000000000000000000000000000000000000000",
@@ -188,6 +188,7 @@ final class FieldElementTest: XCTestCase {
             let expected = FieldElement(from: vector.r)!
             
             let (result, wasSquare) = u.squareRoot(over: v)
+            
             XCTAssertEqual(result, expected)
             XCTAssertEqual(wasSquare, vector.wasSquare)
             XCTAssertFalse(Bool(result.isNegative))
@@ -197,12 +198,12 @@ final class FieldElementTest: XCTestCase {
 
 extension FieldElement: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        Bool((lhs == rhs) as CTBool)
+        Bool(Choice(lhs == rhs))
     }
 }
 
-extension CTBool: Equatable {
+extension Choice: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.rawValue == rhs.rawValue
+        Bool(lhs) == Bool(rhs)
     }
 }

@@ -1,23 +1,21 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.3
 
 import PackageDescription
 
 let package = Package(
-    name: "Ristretto255",
+    name: "ristretto255-swift",
     products: [
-        .library(
-            name: "Ristretto255",
-            targets: ["Ristretto255"]),
+        .library(name: "Ristretto255", targets: ["Ristretto255"])
     ],
     dependencies: [
-        .package(name: "CTBool", url: "https://github.com/nixberg/ctbool-swift", from: "0.1.0"),
+        .package(
+            name: "constant-time-swift",
+            url: "https://github.com/nixberg/constant-time-swift", from: "0.1.0")
     ],
     targets: [
-        .target(
-            name: "Ristretto255",
-            dependencies: ["CTBool"]),
-        .testTarget(
-            name: "Ristretto255Tests",
-            dependencies: ["Ristretto255"]),
+        .target(name: "Ristretto255", dependencies: [
+            .product(name: "ConstantTime", package: "constant-time-swift")
+        ]),
+        .testTarget(name: "Ristretto255Tests", dependencies: ["Ristretto255"])
     ]
 )

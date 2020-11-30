@@ -1,5 +1,5 @@
+import ConstantTime
 import Foundation
-import CTBool
 
 fileprivate let mask52: UInt64 = (1 << 52) - 1
 
@@ -92,9 +92,13 @@ public struct Scalar {
         self = low + high
     }
     
+    public static func random(using generator: inout RandomNumberGenerator) -> Self {
+        Self(fromUniformBytes: (0..<64).map { _ in generator.next() })
+    }
+    
     public static func random() -> Self {
-        var rng = SystemRandomNumberGenerator()
-        return Self(fromUniformBytes: (0..<64).map { _ in rng.next() })
+        var generator: RandomNumberGenerator = SystemRandomNumberGenerator()
+        return self.random(using: &generator)
     }
     
     public func encode<Output>(to output: inout Output) where Output: MutableDataProtocol {
@@ -246,11 +250,11 @@ extension SIMD4 where Scalar == UInt64 {
     }
     
     static func < (lhs: Self, rhs: Self) -> Bool {
-        var result: CTBool = .false
-        var wasSet: CTBool = .false
+        var result: Choice = .false
+        var wasSet: Choice = .false
         
         for i in lhs.indices.reversed() {
-            result = result.or(lhs[i] < rhs[i], if: !wasSet)
+            result = result.replaced(with: lhs[i] < rhs[i], if: !wasSet)
             wasSet = wasSet || !(lhs[i] == rhs[i])
         }
         
@@ -266,13 +270,19 @@ extension SignedRadix16 {
         
         for (i, byte) in zip(stride(from: 0, to: 64, by: 2), scalar.encoded()) {
             self[i + 0] = Int8(byte & 0xf)
-            self[i + 1] = Int8((byte &>> 4) & 0xf)
+            self[i + 1] = Int8((byte >> 4) & 0xf)
         }
         
         for i in 0..<63 {
-            let carry = (self[i] &+ 8) &>> 4
-            self[i + 0] &-= carry &<< 4
+            let carry = (self[i] &+ 8) >> 4
+            self[i + 0] &-= carry << 4
             self[i + 1] &+= carry
         }
+    }
+}
+
+fileprivate extension Choice {
+    func replaced(with other: Self, if choice: Choice) -> Self {
+        (self && !choice) || (other && choice)
     }
 }
