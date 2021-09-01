@@ -2,12 +2,12 @@
   "object": {
     "pins": [
       {
-        "package": "constant-time-swift",
-        "repositoryURL": "https://github.com/nixberg/constant-time-swift",
+        "package": "subtle-swift",
+        "repositoryURL": "https://github.com/nixberg/subtle-swift",
         "state": {
           "branch": null,
-          "revision": "35c9742c126a7f28282654558faffbf3f887363f",
-          "version": "0.2.0"
+          "revision": "c71c45c0cabbd1809ebaf3b328684b04bac1c851",
+          "version": "0.10.0"
         }
       }
     ]

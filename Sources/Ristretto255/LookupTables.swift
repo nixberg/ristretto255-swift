@@ -1,4 +1,4 @@
-import ConstantTime
+import Subtle
 
 struct LookupTable {
     private let table: [ProjectiveNiels]
@@ -18,7 +18,7 @@ struct LookupTable {
             result.replace(with: element, if: absoluteIndex == Int8(i + 1))
         }
         
-        return result.negated(if: Choice(unsafeRawValue: UInt8(truncatingIfNeeded: mask) & 0x01))
+        return result.negated(if: Choice(uncheckedRawValue: UInt8(truncatingIfNeeded: mask) & 0x01))
     }
 }
 
@@ -32,10 +32,10 @@ struct GeneratorLookupTable {
             }
         }
         table = sequence(first: Element.generator) {
-            $0.doubledRepeatedly(count: 8)
-        }.prefix(32).map {
-            row(for: $0)
-        }
+                $0.doubledRepeatedly(count: 8)
+            }
+            .prefix(32)
+            .map(row(for:))
     }
     
     subscript(rowIndex: Int, index: Int8) -> AffineNiels {
@@ -47,7 +47,7 @@ struct GeneratorLookupTable {
             result.replace(with: element, if: absoluteIndex == Int8(i + 1))
         }
         
-        return result.negated(if: Choice(unsafeRawValue: UInt8(truncatingIfNeeded: mask) & 0x01))
+        return result.negated(if: Choice(uncheckedRawValue: UInt8(truncatingIfNeeded: mask) & 0x01))
      }
 }
 
@@ -90,7 +90,7 @@ fileprivate extension AffineNiels {
 
 fileprivate extension Choice {
     init(_ rawValue: Int8) {
-        self = Choice(unsafeRawValue: UInt8(bitPattern: rawValue))
+        self = Choice(uncheckedRawValue: UInt8(bitPattern: rawValue))
     }
 }
 

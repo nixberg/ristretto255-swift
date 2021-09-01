@@ -1,4 +1,4 @@
-import ConstantTime
+import Subtle
 import Foundation
 
 fileprivate let mask52: UInt64 = (1 << 52) - 1
@@ -60,11 +60,11 @@ public struct Scalar {
             return nil
         }
         
-        a = (                     (scalar[0] &<<  0)) & mask52
-        b = ((scalar[0] &>> 52) | (scalar[1] &<< 12)) & mask52
-        c = ((scalar[1] &>> 40) | (scalar[2] &<< 24)) & mask52
-        d = ((scalar[2] &>> 28) | (scalar[3] &<< 36)) & mask52
-        e = ((scalar[3] &>> 16)                     )
+        a = (                    (scalar[0] <<  0)) & mask52
+        b = ((scalar[0] >> 52) | (scalar[1] << 12)) & mask52
+        c = ((scalar[1] >> 40) | (scalar[2] << 24)) & mask52
+        d = ((scalar[2] >> 28) | (scalar[3] << 36)) & mask52
+        e = ((scalar[3] >> 16)                    )
     }
     
     public init<Input>(fromUniformBytes input: Input) where Input: DataProtocol {
@@ -74,19 +74,19 @@ public struct Scalar {
         let y = SIMD4<UInt64>(fromLittleEndianBytes: input.suffix(32))
         
         let low = Scalar(
-            (                (x[0] &<<  0)) & mask52,
-            ((x[0] &>> 52) | (x[1] &<< 12)) & mask52,
-            ((x[1] &>> 40) | (x[2] &<< 24)) & mask52,
-            ((x[2] &>> 28) | (x[3] &<< 32)) & mask52,
-            ((x[3] &>> 16) | (y[0] &<< 48)) & mask52
+            (               (x[0] <<  0)) & mask52,
+            ((x[0] >> 52) | (x[1] << 12)) & mask52,
+            ((x[1] >> 40) | (x[2] << 24)) & mask52,
+            ((x[2] >> 28) | (x[3] << 32)) & mask52,
+            ((x[3] >> 16) | (y[0] << 48)) & mask52
         ).montgomeryMultiplied(with: montgomeryRadix)
         
         let high = Scalar(
-            ((y[0] &>>  4)                ) & mask52,
-            ((y[0] &>> 56) | (y[1] &<<  8)) & mask52,
-            ((y[1] &>> 44) | (y[2] &<< 20)) & mask52,
-            ((y[2] &>> 32) | (y[3] &<< 32)) & mask52,
-            ((y[3] &>> 20)                )
+            ((y[0] >>  4)               ) & mask52,
+            ((y[0] >> 56) | (y[1] <<  8)) & mask52,
+            ((y[1] >> 44) | (y[2] << 20)) & mask52,
+            ((y[2] >> 32) | (y[3] << 32)) & mask52,
+            ((y[3] >> 20)               )
         ).montgomeryMultiplied(with: montgomeryRadixSquared)
         
         self = low + high
@@ -136,13 +136,13 @@ public struct Scalar {
         var carry: UInt64
         carry = lhs.a &+ rhs.a
         let a = carry & mask52
-        carry = lhs.b &+ rhs.b &+ (carry &>> 52)
+        carry = lhs.b &+ rhs.b &+ (carry >> 52)
         let b = carry & mask52
-        carry = lhs.c &+ rhs.c &+ (carry &>> 52)
+        carry = lhs.c &+ rhs.c &+ (carry >> 52)
         let c = carry & mask52
-        carry = lhs.d &+ rhs.d &+ (carry &>> 52)
+        carry = lhs.d &+ rhs.d &+ (carry >> 52)
         let d = carry & mask52
-        carry = lhs.e &+ rhs.e &+ (carry &>> 52)
+        carry = lhs.e &+ rhs.e &+ (carry >> 52)
         let e = carry & mask52
         
         return Self(a, b, c, d, e) - order
@@ -152,27 +152,27 @@ public struct Scalar {
         var borrow: UInt64
         borrow = lhs.a &- rhs.a
         var a = borrow & mask52
-        borrow = lhs.b &- rhs.b &- (borrow &>> 63)
+        borrow = lhs.b &- rhs.b &- (borrow >> 63)
         var b = borrow & mask52
-        borrow = lhs.c &- rhs.c &- (borrow &>> 63)
+        borrow = lhs.c &- rhs.c &- (borrow >> 63)
         var c = borrow & mask52
-        borrow = lhs.d &- rhs.d &- (borrow &>> 63)
+        borrow = lhs.d &- rhs.d &- (borrow >> 63)
         var d = borrow & mask52
-        borrow = lhs.e &- rhs.e &- (borrow &>> 63)
+        borrow = lhs.e &- rhs.e &- (borrow >> 63)
         var e = borrow & mask52
         
-        let underflowMask = ((borrow &>> 63) ^ 1) &- 1
+        let underflowMask = ((borrow >> 63) ^ 1) &- 1
         
         var carry: UInt64
         carry = a &+ (order.a & underflowMask)
         a = carry & mask52
-        carry = b &+ (order.b & underflowMask) &+ (carry &>> 52)
+        carry = b &+ (order.b & underflowMask) &+ (carry >> 52)
         b = carry & mask52
-        carry = c &+ (order.c & underflowMask) &+ (carry &>> 52)
+        carry = c &+ (order.c & underflowMask) &+ (carry >> 52)
         c = carry & mask52
-        carry = d &+ (order.d & underflowMask) &+ (carry &>> 52)
+        carry = d &+ (order.d & underflowMask) &+ (carry >> 52)
         d = carry & mask52
-        carry = e &+ (order.e & underflowMask) &+ (carry &>> 52)
+        carry = e &+ (order.e & underflowMask) &+ (carry >> 52)
         e = carry & mask52
         
         return Self(a, b, c, d, e)
@@ -196,12 +196,12 @@ public struct Scalar {
         @inline(__always)
         func one(_ sum: UInt128) -> (UInt128, UInt64) {
             let p = (sum.low &* 0x51da312547e1b) & mask52
-            return ((sum &+ p <*> order.a) &>> 52, p)
+            return ((sum &+ p <*> order.a) >> 52, p)
         }
         
         @inline(__always)
         func two(_ sum: UInt128) -> (UInt128, UInt64) {
-            (sum &>> 52, sum.low & mask52)
+            (sum >> 52, sum.low & mask52)
         }
         
         var carry: UInt128
@@ -228,7 +228,7 @@ public struct Scalar {
 extension UInt64 {
     init<Input>(fromLittleEndianBytes input: Input) where Input: DataProtocol {
         assert(input.count == MemoryLayout<Self>.size)
-        self = input.reduce(0) { ($0 &<< 8) | Self($1) }.byteSwapped
+        self = input.reduce(0) { ($0 << 8) | Self($1) }.byteSwapped
     }
 }
 
@@ -254,8 +254,8 @@ extension SIMD4 where Scalar == UInt64 {
         var wasSet: Choice = .false
         
         for i in lhs.indices.reversed() {
-            result = result.replaced(with: lhs[i] < rhs[i], if: !wasSet)
-            wasSet = wasSet || !(lhs[i] == rhs[i])
+            result.replace(with: lhs[i] < rhs[i], if: !wasSet)
+            wasSet ||= !(lhs[i] == rhs[i])
         }
         
         return Bool(result)
@@ -278,11 +278,5 @@ extension SignedRadix16 {
             self[i + 0] &-= carry << 4
             self[i + 1] &+= carry
         }
-    }
-}
-
-fileprivate extension Choice {
-    func replaced(with other: Self, if choice: Choice) -> Self {
-        (self && !choice) || (other && choice)
     }
 }

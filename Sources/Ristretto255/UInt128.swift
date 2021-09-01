@@ -5,6 +5,7 @@ struct UInt128 {
     let high: UInt64
     let low: UInt64
     
+    @inline(__always)
     fileprivate init(_ high: UInt64, _ low: UInt64) {
         self.high = high
         self.low = low
@@ -24,8 +25,8 @@ struct UInt128 {
     }
     
     @inline(__always)
-    static func &>> (lhs: Self, rhs: Int) -> Self {
-        Self(lhs.high &>> rhs, (lhs.high &<< (64 - rhs)) | (lhs.low &>> rhs))
+    static func >> (lhs: Self, rhs: Int) -> Self {
+        Self(lhs.high >> rhs, (lhs.high << (64 - rhs)) | (lhs.low >> rhs))
     }
     
     @inline(__always)

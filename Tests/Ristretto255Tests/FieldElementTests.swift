@@ -1,6 +1,6 @@
-import ConstantTime
-import XCTest
 @testable import Ristretto255
+import Subtle
+import XCTest
 
 final class FieldElementTest: XCTestCase {
     let a =  FieldElement(
@@ -61,7 +61,8 @@ final class FieldElementTest: XCTestCase {
     }
     
     func testHighBitIgnored() {
-        let highBitSet: [UInt8] = "71bfa98f5bea790ff183d924e6655cea08d0aafb617f46d23a17a657f0a9b8b2"
+        let highBitSet: [UInt8] =
+            "71bfa98f5bea790ff183d924e6655cea08d0aafb617f46d23a17a657f0a9b8b2"
         var highBitCleared = highBitSet
         highBitCleared[31] &= 0b0111_1111
         XCTAssertEqual(FieldElement(canonicalizing: highBitSet), FieldElement(from: highBitCleared))

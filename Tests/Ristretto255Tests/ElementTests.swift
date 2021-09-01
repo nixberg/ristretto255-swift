@@ -1,9 +1,10 @@
-import XCTest
 @testable import Ristretto255
+import XCTest
 
 final class ElementTest: XCTestCase {
     func testZeroRoundtrip() {
-        let encoding: [UInt8] = "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000"
+        let encoding: [UInt8] =
+            "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000"
         let zero = Element(from: encoding)
         XCTAssertNotNil(zero)
         XCTAssertEqual(zero, Element.zero)
@@ -12,7 +13,8 @@ final class ElementTest: XCTestCase {
     }
     
     func testGeneratorRoundtrip() {
-        let encoding: [UInt8] = "e2f2ae0a 6abc4e71 a884a961 c500515f 58e30b6a a582dd8d b6a65945 e08d2d76"
+        let encoding: [UInt8] =
+            "e2f2ae0a 6abc4e71 a884a961 c500515f 58e30b6a a582dd8d b6a65945 e08d2d76"
         let generator = Element(from: encoding)
         XCTAssertNotNil(generator)
         XCTAssertEqual(generator, Element.generator)
@@ -155,7 +157,8 @@ final class ElementTest: XCTestCase {
             "0000000000000000000000000000000000000000000000000000000000000000" +
             "1200000000000000000000000000000000000000000000000000000000000080",
         ]
-        let expected: [UInt8] = "30428279 1023b731 28d277bd cb5c7746 ef2eac08 dde9f298 3379cb8e 5ef0517f"
+        let expected: [UInt8] =
+            "30428279 1023b731 28d277bd cb5c7746 ef2eac08 dde9f298 3379cb8e 5ef0517f"
         
         for vector in vectors {
             XCTAssertEqual(Element(fromUniformBytes: vector).encoded(), expected)

@@ -1,4 +1,4 @@
-import ConstantTime
+import Subtle
 import Foundation
 
 fileprivate let mask51: UInt64 = (1 << 51) - 1
@@ -43,15 +43,15 @@ struct FieldElement {
         precondition(input.count == 32)
         
         var input = input[...]
-        let a = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  0) & mask51
+        let a = (UInt64(fromLittleEndianBytes: input.prefix(8)) >>  0) & mask51
         input = input.dropFirst(6)
-        let b = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  3) & mask51
+        let b = (UInt64(fromLittleEndianBytes: input.prefix(8)) >>  3) & mask51
         input = input.dropFirst(6)
-        let c = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  6) & mask51
+        let c = (UInt64(fromLittleEndianBytes: input.prefix(8)) >>  6) & mask51
         input = input.dropFirst(7)
-        let d = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>>  1) & mask51
+        let d = (UInt64(fromLittleEndianBytes: input.prefix(8)) >>  1) & mask51
         input = input.dropFirst(5)
-        let e = (UInt64(fromLittleEndianBytes: input.prefix(8)) &>> 12) & mask51
+        let e = (UInt64(fromLittleEndianBytes: input.prefix(8)) >> 12) & mask51
         
         self.init(a, b, c, d, e)
     }
@@ -73,28 +73,28 @@ struct FieldElement {
         for n in stride(from: 0, to: 48, by: 8) {
             output.append(UInt8(truncatingIfNeeded: canonical.a &>> n))
         }
-        output.append(UInt8(truncatingIfNeeded: canonical.a &>> 48 | canonical.b &<< 3))
+        output.append(UInt8(truncatingIfNeeded: canonical.a >> 48 | canonical.b << 3))
         
         for n in stride(from: 5, to: 45, by: 8) {
             output.append(UInt8(truncatingIfNeeded: canonical.b &>> n))
         }
-        output.append(UInt8(truncatingIfNeeded: canonical.b &>> 45 | canonical.c &<< 6))
+        output.append(UInt8(truncatingIfNeeded: canonical.b >> 45 | canonical.c << 6))
         
         for n in stride(from: 2, to: 50, by: 8) {
             output.append(UInt8(truncatingIfNeeded: canonical.c &>> n))
         }
-        output.append(UInt8(truncatingIfNeeded: canonical.c &>> 50 | canonical.d &<< 1))
+        output.append(UInt8(truncatingIfNeeded: canonical.c >> 50 | canonical.d << 1))
         
         for n in stride(from: 7, to: 47, by: 8) {
             output.append(UInt8(truncatingIfNeeded: canonical.d &>> n))
         }
-        output.append(UInt8(truncatingIfNeeded: canonical.d &>> 47 | canonical.e &<< 4))
+        output.append(UInt8(truncatingIfNeeded: canonical.d >> 47 | canonical.e << 4))
         
         for n in stride(from: 4, to: 52, by: 8) {
             output.append(UInt8(truncatingIfNeeded: canonical.e &>> n))
         }
         
-        assert(canonical.e &>> 51 == 0)
+        assert(canonical.e >> 51 == 0)
     }
     
     public func encoded() -> [UInt8] {
@@ -105,7 +105,7 @@ struct FieldElement {
     }
     
     var isNegative: Choice {
-        Choice(unsafeRawValue: UInt8(truncatingIfNeeded: self.canonicalized().a) & 0x01)
+        Choice(uncheckedRawValue: UInt8(truncatingIfNeeded: self.canonicalized().a) & 0b1)
     }
     
     var isZero: Choice {
@@ -151,10 +151,6 @@ struct FieldElement {
         .zero - operand
     }
     
-    mutating func negate(if choice: Choice) {
-        self = self.replaced(with: -self, if: choice)
-    }
-    
     static func * (lhs: Self, rhs: Self) -> Self {
         lhs.assertBounds()
         rhs.assertBounds()
@@ -169,13 +165,13 @@ struct FieldElement {
         )
         
         let c0 = x.a <*> y.a &+ x.e <*> m.b &+ x.d <*> m.c &+ x.c <*> m.d &+ x.b <*> m.e
-        let c1 = x.b <*> y.a &+ x.a <*> y.b &+ x.e <*> m.c &+ x.d <*> m.d &+ x.c <*> m.e &+> (c0 &>> 51).low
-        let c2 = x.c <*> y.a &+ x.b <*> y.b &+ x.a <*> y.c &+ x.e <*> m.d &+ x.d <*> m.e &+> (c1 &>> 51).low
-        let c3 = x.d <*> y.a &+ x.c <*> y.b &+ x.b <*> y.c &+ x.a <*> y.d &+ x.e <*> m.e &+> (c2 &>> 51).low
-        let c4 = x.e <*> y.a &+ x.d <*> y.b &+ x.c <*> y.c &+ x.b <*> y.d &+ x.a <*> y.e &+> (c3 &>> 51).low
+        let c1 = x.b <*> y.a &+ x.a <*> y.b &+ x.e <*> m.c &+ x.d <*> m.d &+ x.c <*> m.e &+> (c0 >> 51).low
+        let c2 = x.c <*> y.a &+ x.b <*> y.b &+ x.a <*> y.c &+ x.e <*> m.d &+ x.d <*> m.e &+> (c1 >> 51).low
+        let c3 = x.d <*> y.a &+ x.c <*> y.b &+ x.b <*> y.c &+ x.a <*> y.d &+ x.e <*> m.e &+> (c2 >> 51).low
+        let c4 = x.e <*> y.a &+ x.d <*> y.b &+ x.c <*> y.c &+ x.b <*> y.d &+ x.a <*> y.e &+> (c3 >> 51).low
         
-        let a = (c0.low & mask51) &+ 19 &* (c4 &>> 51).low
-        let b = (c1.low & mask51) &+ a &>> 51
+        let a = (c0.low & mask51) &+ 19 &* (c4 >> 51).low
+        let b = (c1.low & mask51) &+ a >> 51
         
         return Self(
             a & mask51,
@@ -195,13 +191,13 @@ struct FieldElement {
         )
         
         let c0 = a <*>   a &+ (b <*> m.e &+ c <*> m.d).doubled()
-        let c1 = d <*> m.d &+ (a <*>   b &+ c <*> m.e).doubled() &+> (c0 &>> 51).low
-        let c2 = b <*>   b &+ (a <*>   c &+ e <*> m.d).doubled() &+> (c1 &>> 51).low
-        let c3 = e <*> m.e &+ (a <*>   d &+ b <*>   c).doubled() &+> (c2 &>> 51).low
-        let c4 = c <*>   c &+ (a <*>   e &+ b <*>   d).doubled() &+> (c3 &>> 51).low
+        let c1 = d <*> m.d &+ (a <*>   b &+ c <*> m.e).doubled() &+> (c0 >> 51).low
+        let c2 = b <*>   b &+ (a <*>   c &+ e <*> m.d).doubled() &+> (c1 >> 51).low
+        let c3 = e <*> m.e &+ (a <*>   d &+ b <*>   c).doubled() &+> (c2 >> 51).low
+        let c4 = c <*>   c &+ (a <*>   e &+ b <*>   d).doubled() &+> (c3 >> 51).low
         
-        let a = (c0.low & mask51) &+ 19 &* (c4 &>> 51).low
-        let b = (c1.low & mask51) &+ a &>> 51
+        let a = (c0.low & mask51) &+ 19 &* (c4 >> 51).low
+        let b = (c1.low & mask51) &+ a >> 51
         
         return Self(
             a & mask51,
@@ -263,28 +259,26 @@ struct FieldElement {
     
     private func reduced() -> Self {
         Self(
-            (a & mask51) &+ (e &>> 51) &* 19,
-            (b & mask51) &+ (a &>> 51),
-            (c & mask51) &+ (b &>> 51),
-            (d & mask51) &+ (c &>> 51),
-            (e & mask51) &+ (d &>> 51)
+            (a & mask51) &+ (e >> 51) &* 19,
+            (b & mask51) &+ (a >> 51),
+            (c & mask51) &+ (b >> 51),
+            (d & mask51) &+ (c >> 51),
+            (e & mask51) &+ (d >> 51)
         )
     }
     
     private var q: UInt64 {
-        [a, b, c, d, e].reduce(19) {
-            ($0 &+ $1) &>> 51
-        }
+        [a, b, c, d, e].reduce(19, { ($0 &+ $1) >> 51 })
     }
     
     func canonicalized() -> Self {
         let reduced = self.reduced()
         
         let a = reduced.a &+ 19 &* reduced.q
-        let b = reduced.b &+ (a &>> 51)
-        let c = reduced.c &+ (b &>> 51)
-        let d = reduced.d &+ (c &>> 51)
-        let e = reduced.e &+ (d &>> 51)
+        let b = reduced.b &+ (a >> 51)
+        let c = reduced.c &+ (b >> 51)
+        let d = reduced.d &+ (c >> 51)
+        let e = reduced.e &+ (d >> 51)
         
         return FieldElement(
             a & mask51,
@@ -296,19 +290,27 @@ struct FieldElement {
     }
 }
 
+@inline(__always)
 func abs(_ x: FieldElement) -> FieldElement {
-    x.replaced(with: -x, if: x.isNegative)
+    x.negated(if: x.isNegative)
 }
 
-extension FieldElement {
+extension FieldElement: ConditionallyNegatable {
+    @inline(__always)
+    func negated(if choice: Choice) -> Self {
+        self.replaced(with: -self, if: choice)
+    }
+}
+
+extension FieldElement: ConditionallyReplaceable {
+    @inline(__always)
     func replaced(with other: Self, if choice: Choice) -> Self {
-        let mask = UInt64(maskFrom: choice)
-        return FieldElement(
-            (a & ~mask) | (other.a & mask),
-            (b & ~mask) | (other.b & mask),
-            (c & ~mask) | (other.c & mask),
-            (d & ~mask) | (other.d & mask),
-            (e & ~mask) | (other.e & mask)
+        FieldElement(
+            a.replaced(with: other.a, if: choice),
+            b.replaced(with: other.b, if: choice),
+            c.replaced(with: other.c, if: choice),
+            d.replaced(with: other.d, if: choice),
+            e.replaced(with: other.e, if: choice)
         )
     }
 }

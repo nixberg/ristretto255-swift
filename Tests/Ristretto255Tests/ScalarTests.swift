@@ -1,5 +1,5 @@
-import XCTest
 @testable import Ristretto255
+import XCTest
 
 final class ScalarTests: XCTestCase {
     private let a = Scalar(
