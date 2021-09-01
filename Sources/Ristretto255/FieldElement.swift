@@ -1,5 +1,4 @@
 import Subtle
-import Foundation
 
 fileprivate let mask51: UInt64 = (1 << 51) - 1
 
@@ -39,7 +38,7 @@ struct FieldElement {
         self.e = e
     }
     
-    private init<Input>(unchecked input: Input) where Input: DataProtocol {
+    private init<Input>(unchecked input: Input) where Input: Collection, Input.Element == UInt8 {
         precondition(input.count == 32)
         
         var input = input[...]
@@ -56,18 +55,19 @@ struct FieldElement {
         self.init(a, b, c, d, e)
     }
     
-    init?<Input>(from input: Input) where Input: DataProtocol {
+    init?<Input>(from input: Input) where Input: Collection, Input.Element == UInt8 {
         self.init(unchecked: input)
         guard zip(self.encoded(), input).map(^).reduce(0, |) == 0 else {
             return nil
         }
     }
     
-    init<Input>(canonicalizing input: Input) where Input: DataProtocol {
+    init<Input>(canonicalizing input: Input) where Input: Collection, Input.Element == UInt8 {
         self = Self(unchecked: input).canonicalized()
     }
     
-    public func encode<Output>(to output: inout Output) where Output: MutableDataProtocol {
+    public func encode<Output>(to output: inout Output)
+    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
         let canonical = self.canonicalized()
         
         for n in stride(from: 0, to: 48, by: 8) {

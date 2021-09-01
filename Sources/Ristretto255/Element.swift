@@ -1,5 +1,4 @@
 import Subtle
-import Foundation
 
 fileprivate let d = FieldElement(
     0x00034dca135978a3,
@@ -40,7 +39,7 @@ public struct Element: Equatable {
        t = source.x * source.y
     }
     
-    public init?<Input>(from input: Input) where Input: DataProtocol {
+    public init?<Input>(from input: Input) where Input: Collection, Input.Element == UInt8 {
         precondition(input.count == 32)
         
         guard let s = FieldElement(from: input) else {
@@ -73,7 +72,8 @@ public struct Element: Equatable {
         }
     }
     
-    public init<Input>(fromUniformBytes input: Input) where Input: DataProtocol {
+    public init<Input>(fromUniformBytes input: Input)
+    where Input: Collection, Input.Element == UInt8 {
         precondition(input.count == 64)
         
         let r0 = FieldElement(canonicalizing: input.prefix(32))
@@ -144,7 +144,8 @@ public struct Element: Equatable {
         )
     }
     
-    public func encode<Output>(to output: inout Output) where Output: MutableDataProtocol {
+    public func encode<Output>(to output: inout Output)
+    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
         let inverseSquareRootMinusOneMinusD = FieldElement(
             0x0000fdaa805d40ea,
             0x0002eb482e57d339,

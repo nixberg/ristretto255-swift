@@ -1,5 +1,4 @@
 import Subtle
-import Foundation
 
 fileprivate let mask52: UInt64 = (1 << 52) - 1
 
@@ -44,7 +43,7 @@ public struct Scalar {
         self.e = e
     }
     
-    public init?<Input>(from input: Input) where Input: DataProtocol {
+    public init?<Input>(from input: Input) where Input: Collection, Input.Element == UInt8 {
         precondition(input.count == 32)
         
         let scalar = SIMD4<UInt64>(fromLittleEndianBytes: input)
@@ -67,7 +66,8 @@ public struct Scalar {
         e = ((scalar[3] >> 16)                    )
     }
     
-    public init<Input>(fromUniformBytes input: Input) where Input: DataProtocol {
+    public init<Input>(fromUniformBytes input: Input)
+    where Input: Collection, Input.Element == UInt8 {
         precondition(input.count == 64)
         
         let x = SIMD4<UInt64>(fromLittleEndianBytes: input.prefix(32))
@@ -101,7 +101,8 @@ public struct Scalar {
         return self.random(using: &generator)
     }
     
-    public func encode<Output>(to output: inout Output) where Output: MutableDataProtocol {
+    public func encode<Output>(to output: inout Output)
+    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
         for n in stride(from: 0, to: 48, by: 8) {
             output.append(UInt8(truncatingIfNeeded: a &>> n))
         }
@@ -226,14 +227,16 @@ public struct Scalar {
 }
 
 extension UInt64 {
-    init<Input>(fromLittleEndianBytes input: Input) where Input: DataProtocol {
+    init<Input>(fromLittleEndianBytes input: Input)
+    where Input: Collection, Input.Element == UInt8 {
         assert(input.count == MemoryLayout<Self>.size)
         self = input.reduce(0) { ($0 << 8) | Self($1) }.byteSwapped
     }
 }
 
 extension SIMD4 where Scalar == UInt64 {
-    fileprivate init<Input>(fromLittleEndianBytes input: Input) where Input: DataProtocol {
+    fileprivate init<Input>(fromLittleEndianBytes input: Input)
+    where Input: Collection, Input.Element == UInt8 {
         let scalarSize = MemoryLayout<Scalar>.size
         assert(input.count == Self.scalarCount * scalarSize)
         
