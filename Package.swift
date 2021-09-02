@@ -10,6 +10,7 @@ let package = Package(
             targets: ["Ristretto255"])
     ],
     dependencies: [
+        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.3.0"),
         .package(url: "https://github.com/nixberg/subtle-swift", from: "0.10.0"),
     ],
     targets: [
@@ -20,6 +21,9 @@ let package = Package(
             ]),
         .testTarget(
             name: "Ristretto255Tests",
-            dependencies: ["Ristretto255"])
+            dependencies: [
+                .product(name: "HexString", package: "hexstring-swift"),
+                "Ristretto255"
+            ])
     ]
 )

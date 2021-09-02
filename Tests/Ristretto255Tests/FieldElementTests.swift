@@ -1,3 +1,4 @@
+import HexString
 @testable import Ristretto255
 import Subtle
 import XCTest

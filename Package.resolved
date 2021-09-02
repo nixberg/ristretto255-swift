@@ -2,12 +2,39 @@
   "object": {
     "pins": [
       {
+        "package": "hexstring-swift",
+        "repositoryURL": "https://github.com/nixberg/hexstring-swift",
+        "state": {
+          "branch": "master",
+          "revision": "ef628ff0564cf699ae23f85d5d4a49b5531a73b8",
+          "version": null
+        }
+      },
+      {
         "package": "subtle-swift",
         "repositoryURL": "https://github.com/nixberg/subtle-swift",
         "state": {
           "branch": null,
           "revision": "c71c45c0cabbd1809ebaf3b328684b04bac1c851",
           "version": "0.10.0"
+        }
+      },
+      {
+        "package": "swift-algorithms",
+        "repositoryURL": "https://github.com/apple/swift-algorithms",
+        "state": {
+          "branch": null,
+          "revision": "2327673b0e9c7e90e6b1826376526ec3627210e4",
+          "version": "0.2.1"
+        }
+      },
+      {
+        "package": "swift-numerics",
+        "repositoryURL": "https://github.com/apple/swift-numerics",
+        "state": {
+          "branch": null,
+          "revision": "6583ac70c326c3ee080c1d42d9ca3361dca816cd",
+          "version": "0.1.0"
         }
       }
     ]

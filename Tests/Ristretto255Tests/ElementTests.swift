@@ -1,3 +1,4 @@
+import HexString
 @testable import Ristretto255
 import XCTest
 
@@ -204,25 +205,4 @@ final class ElementTest: XCTestCase {
         
         XCTAssertEqual(lhs, rhs)
     }
-}
-
-extension Array: ExpressibleByStringLiteral where Element == UInt8 {
-    public typealias StringLiteralType = String
-    
-    public init(stringLiteral hex: StringLiteralType) {
-        var hex = hex.components(separatedBy: .whitespaces).joined()[...]
-        precondition(hex.count.isMultiple(of: 2))
-        self = stride(from: 0, to: hex.count, by: 2).map { _ in
-            defer { hex = hex.dropFirst(2) }
-            return UInt8(hex.prefix(2), radix: 16)!
-        }
-    }
-}
-
-extension Array: ExpressibleByUnicodeScalarLiteral where Element == UInt8 {
-    public typealias UnicodeScalarLiteralType = String
-}
-
-extension Array: ExpressibleByExtendedGraphemeClusterLiteral where Element == UInt8 {
-    public typealias ExtendedGraphemeClusterLiteralType = String
 }
