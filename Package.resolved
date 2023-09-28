@@ -5,9 +5,9 @@
         "package": "hexstring-swift",
         "repositoryURL": "https://github.com/nixberg/hexstring-swift",
         "state": {
-          "branch": "master",
-          "revision": "ef628ff0564cf699ae23f85d5d4a49b5531a73b8",
-          "version": null
+          "branch": null,
+          "revision": "a9d1e15e3547037216b8f5556544f38164867725",
+          "version": "0.5.0"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/nixberg/subtle-swift",
         "state": {
           "branch": null,
-          "revision": "c71c45c0cabbd1809ebaf3b328684b04bac1c851",
-          "version": "0.10.0"
+          "revision": "bfe1e1a45656c05a89e8a677b3ee5215eeaef18e",
+          "version": "0.11.0"
         }
       },
       {
@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/apple/swift-algorithms",
         "state": {
           "branch": null,
-          "revision": "2327673b0e9c7e90e6b1826376526ec3627210e4",
-          "version": "0.2.1"
+          "revision": "b14b7f4c528c942f121c8b860b9410b2bf57825e",
+          "version": "1.0.0"
         }
       },
       {
@@ -33,8 +33,8 @@
         "repositoryURL": "https://github.com/apple/swift-numerics",
         "state": {
           "branch": null,
-          "revision": "6583ac70c326c3ee080c1d42d9ca3361dca816cd",
-          "version": "0.1.0"
+          "revision": "0a5bc04095a675662cf24757cc0640aa2204253b",
+          "version": "1.0.2"
         }
       }
     ]
